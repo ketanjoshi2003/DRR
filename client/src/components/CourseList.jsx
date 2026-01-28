@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Plus, Book, Trash2 } from 'lucide-react';
+import { useEffect, useState, useRef } from 'react';
+import { Plus, Book, Upload } from 'lucide-react';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 
@@ -9,6 +9,8 @@ const CourseList = () => {
     const [showAddModal, setShowAddModal] = useState(false);
     const [newCourse, setNewCourse] = useState({ name: '', code: '', description: '' });
     const { user } = useAuth();
+    const fileInputRef = useRef(null);
+    const [uploading, setUploading] = useState(false);
 
     useEffect(() => {
         fetchCourses();
@@ -38,6 +40,33 @@ const CourseList = () => {
         }
     };
 
+    const handleFileUpload = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        setUploading(true);
+        try {
+            await api.post('/courses/upload', formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
+            });
+            alert('Courses uploaded successfully!');
+            fetchCourses();
+        } catch (error) {
+            console.error('Error uploading CSV:', error);
+            alert('Failed to upload courses.');
+        } finally {
+            setUploading(false);
+            if (fileInputRef.current) {
+                fileInputRef.current.value = '';
+            }
+        }
+    };
+
     if (loading) return <div>Loading courses...</div>;
 
     return (
@@ -45,13 +74,30 @@ const CourseList = () => {
             <div className="flex justify-between items-center mb-6">
                 <h1 className="text-2xl font-bold">Courses</h1>
                 {user?.role === 'admin' && (
-                    <button
-                        onClick={() => setShowAddModal(true)}
-                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-                    >
-                        <Plus className="w-4 h-4" />
-                        Add Course
-                    </button>
+                    <div className="flex gap-3">
+                        <input
+                            type="file"
+                            accept=".csv"
+                            ref={fileInputRef}
+                            onChange={handleFileUpload}
+                            className="hidden"
+                        />
+                        <button
+                            onClick={() => fileInputRef.current?.click()}
+                            disabled={uploading}
+                            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors disabled:opacity-50"
+                        >
+                            <Upload className="w-4 h-4" />
+                            {uploading ? 'Uploading...' : 'Upload CSV'}
+                        </button>
+                        <button
+                            onClick={() => setShowAddModal(true)}
+                            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                        >
+                            <Plus className="w-4 h-4" />
+                            Add Course
+                        </button>
+                    </div>
                 )}
             </div>
 
