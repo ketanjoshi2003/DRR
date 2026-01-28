@@ -67,8 +67,8 @@ const DatabaseManager = () => {
                 <button
                     onClick={() => setActiveTab('users')}
                     className={`pb-3 px-4 flex items-center gap-2 font-medium transition-colors border-b-2 ${activeTab === 'users'
-                            ? 'border-blue-600 text-blue-600'
-                            : 'border-transparent text-gray-500 hover:text-gray-700'
+                        ? 'border-brand-600 text-brand-600'
+                        : 'border-transparent text-gray-500 hover:text-gray-700'
                         }`}
                 >
                     <Users className="w-5 h-5" />
@@ -77,8 +77,8 @@ const DatabaseManager = () => {
                 <button
                     onClick={() => setActiveTab('pdfs')}
                     className={`pb-3 px-4 flex items-center gap-2 font-medium transition-colors border-b-2 ${activeTab === 'pdfs'
-                            ? 'border-blue-600 text-blue-600'
-                            : 'border-transparent text-gray-500 hover:text-gray-700'
+                        ? 'border-brand-600 text-brand-600'
+                        : 'border-transparent text-gray-500 hover:text-gray-700'
                         }`}
                 >
                     <FileText className="w-5 h-5" />
@@ -99,7 +99,7 @@ const DatabaseManager = () => {
             {loading ? (
                 <div className="text-center py-12 text-gray-500">Loading data...</div>
             ) : activeTab === 'users' ? (
-                <div className="bg-white rounded-lg shadow overflow-hidden">
+                <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
                     <table className="min-w-full divide-y divide-gray-200">
                         <thead className="bg-gray-50">
                             <tr>
@@ -140,7 +140,7 @@ const DatabaseManager = () => {
                     </table>
                 </div>
             ) : (
-                <div className="bg-white rounded-lg shadow overflow-hidden">
+                <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
                     <table className="min-w-full divide-y divide-gray-200">
                         <thead className="bg-gray-50">
                             <tr>

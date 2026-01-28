@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Book, Upload, Trash2 } from 'lucide-react';
+import CustomSelect from './CustomSelect';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 
@@ -123,7 +124,7 @@ const CourseList = () => {
                         />
                         <button
                             onClick={handleDeleteAllCourses}
-                            className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+                            className="flex items-center gap-2 px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
                         >
                             <Trash2 className="w-4 h-4" />
                             Delete All
@@ -131,14 +132,14 @@ const CourseList = () => {
                         <button
                             onClick={() => fileInputRef.current?.click()}
                             disabled={uploading}
-                            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors disabled:opacity-50"
+                            className="flex items-center gap-2 px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 text-sm font-medium"
                         >
                             <Upload className="w-4 h-4" />
                             {uploading ? 'Uploading...' : 'Upload CSV'}
                         </button>
                         <button
                             onClick={() => setShowAddModal(true)}
-                            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                            className="flex items-center gap-2 px-3 py-1.5 bg-brand-600 text-white rounded-lg hover:bg-brand-700 transition-colors text-sm font-medium"
                         >
                             <Plus className="w-4 h-4" />
                             Add Course
@@ -152,11 +153,11 @@ const CourseList = () => {
                     const courseSemesters = semesters.filter(s => s.course?._id === course._id);
 
                     return (
-                        <div key={course._id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow flex flex-col h-full">
+                        <div key={course._id} className="bg-white rounded-xl border border-gray-200 p-6 hover:border-brand-300 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 transform-gpu flex flex-col h-full">
                             <div className="flex-1">
                                 <div className="flex items-start justify-between mb-4">
-                                    <div className="p-3 bg-blue-50 rounded-lg">
-                                        <Book className="w-8 h-8 text-blue-600" />
+                                    <div className="p-3 bg-brand-50 rounded-lg">
+                                        <Book className="w-8 h-8 text-brand-600" />
                                     </div>
                                 </div>
                                 <h3 className="text-lg font-medium text-gray-900">{course.name}</h3>
@@ -168,28 +169,29 @@ const CourseList = () => {
                                 {/* Semester Dropdown */}
                                 <div className="mt-4">
                                     <label className="text-xs text-gray-500 font-medium uppercase tracking-wide">Select Semester</label>
-                                    <select
-                                        className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md border"
-                                        value={selectedSemesters[course._id] || ''}
-                                        onChange={(e) => handleSemesterChange(course._id, e.target.value)}
-                                    >
-                                        <option value="all">All Semesters</option>
-                                        {courseSemesters.map(sem => (
-                                            <option key={sem._id} value={sem._id}>{sem.name}</option>
-                                        ))}
-                                    </select>
+                                    <div className="relative mt-1">
+                                        <CustomSelect
+                                            value={selectedSemesters[course._id] || 'all'}
+                                            onChange={(newValue) => handleSemesterChange(course._id, newValue)}
+                                            options={[
+                                                { value: 'all', label: 'All Semesters' },
+                                                ...courseSemesters.map(sem => ({ value: sem._id, label: sem.name }))
+                                            ]}
+                                            placeholder="Select Semester"
+                                        />
+                                    </div>
                                 </div>
                             </div>
-                            <div className="mt-6 pt-4 border-t border-gray-100 flex justify-between items-center">
+                            <div className="mt-4 flex justify-between items-center gap-3">
                                 <button
                                     onClick={() => handleViewSubjects(course._id)}
-                                    className="flex-1 text-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors"
+                                    className="flex-1 text-center px-4 py-2 bg-brand-600 text-white text-sm font-medium rounded-lg hover:bg-brand-700 transition-colors shadow-sm"
                                 >
                                     View Subjects
                                 </button>
                                 <button
                                     onClick={() => navigate(`/semesters?courseId=${course._id}`)}
-                                    className="ml-3 text-sm text-gray-500 hover:text-gray-700 font-medium hover:underline"
+                                    className="text-sm text-gray-500 hover:text-brand-600 font-medium hover:bg-brand-50 px-3 py-2 rounded-lg transition-colors"
                                 >
                                     Manage Semesters
                                 </button>

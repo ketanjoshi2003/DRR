@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Plus, Upload, Book, Filter, Calendar, Trash2 } from 'lucide-react';
+import CustomSelect from './CustomSelect';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 
@@ -110,19 +111,19 @@ const SemesterList = () => {
                 <h1 className="text-2xl font-bold">Semesters</h1>
 
                 <div className="flex flex-wrap gap-3 items-center">
-                    <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-md px-3 py-2">
-                        <Filter className="w-4 h-4 text-gray-500" />
-                        <select
+                    <div className="w-[200px]">
+                        <CustomSelect
+                            icon={Filter}
                             value={selectedCourse}
-                            onChange={(e) => setSelectedCourse(e.target.value)}
-                            className="bg-transparent border-none outline-none text-sm text-gray-700 min-w-[150px]"
-                        >
-                            <option value="all">All Courses</option>
-                            {courses.map(c => (
-                                <option key={c._id} value={c._id}>{c.name} ({c.code})</option>
-                            ))}
-                        </select>
+                            onChange={(newValue) => setSelectedCourse(newValue)}
+                            options={[
+                                { value: 'all', label: 'All Courses' },
+                                ...courses.map(c => ({ value: c._id, label: `${c.name} (${c.code})` }))
+                            ]}
+                            placeholder="Filter by Course"
+                        />
                     </div>
+
 
                     {user?.role === 'admin' && (
                         <>
@@ -150,7 +151,7 @@ const SemesterList = () => {
                             </button>
                             <button
                                 onClick={() => setShowAddModal(true)}
-                                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm"
+                                className="flex items-center gap-2 px-4 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700 transition-colors text-sm font-medium"
                             >
                                 <Plus className="w-4 h-4" />
                                 Add Semester
@@ -158,20 +159,20 @@ const SemesterList = () => {
                         </>
                     )}
                 </div>
-            </div>
+            </div >
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredSemesters.map((semester) => (
-                    <div key={semester._id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow relative overflow-hidden">
-                        <div className="absolute top-0 right-0 p-2 opacity-10">
+                    <div key={semester._id} className="bg-white rounded-xl border border-gray-200 p-6 hover:border-brand-300 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 transform-gpu relative overflow-hidden">
+                        <div className="absolute top-0 right-0 p-2 opacity-5">
                             <Calendar className="w-24 h-24" />
                         </div>
                         <div className="relative z-10">
                             <div className="flex items-center gap-2 mb-2">
-                                <span className="px-2 py-1 bg-blue-50 text-blue-700 text-xs font-semibold rounded-full">
+                                <span className="px-2 py-1 bg-brand-50 text-brand-700 text-xs font-semibold rounded-full border border-brand-100">
                                     {semester.course?.code || 'Unknown Course'}
                                 </span>
-                                <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs font-mono rounded-full">
+                                <span className="px-2 py-1 bg-gray-50 text-gray-600 text-xs font-mono rounded-full border border-gray-200">
                                     {semester.code}
                                 </span>
                             </div>
@@ -184,84 +185,88 @@ const SemesterList = () => {
                 ))}
             </div>
 
-            {filteredSemesters.length === 0 && (
-                <div className="text-center py-12 text-gray-500 bg-gray-50 rounded-lg border border-dashed border-gray-300">
-                    <Calendar className="w-12 h-12 mx-auto text-gray-300 mb-3" />
-                    <p>No semesters found for the selected criteria.</p>
-                </div>
-            )}
+            {
+                filteredSemesters.length === 0 && (
+                    <div className="text-center py-12 text-gray-500 bg-gray-50 rounded-lg border border-dashed border-gray-300">
+                        <Calendar className="w-12 h-12 mx-auto text-gray-300 mb-3" />
+                        <p>No semesters found for the selected criteria.</p>
+                    </div>
+                )
+            }
 
             {/* Add Semester Modal */}
-            {showAddModal && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                    <div className="bg-white rounded-lg p-6 w-full max-w-md animate-in fade-in zoom-in duration-200">
-                        <h2 className="text-xl font-bold mb-4">Add New Semester</h2>
-                        <form onSubmit={handleAddSemester}>
-                            <div className="space-y-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Select Course</label>
-                                    <select
-                                        required
-                                        value={newSemester.courseId}
-                                        onChange={(e) => setNewSemester({ ...newSemester, courseId: e.target.value })}
-                                        className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 border p-2"
+            {
+                showAddModal && (
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                        <div className="bg-white rounded-lg p-6 w-full max-w-md animate-in fade-in zoom-in duration-200">
+                            <h2 className="text-xl font-bold mb-4">Add New Semester</h2>
+                            <form onSubmit={handleAddSemester}>
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Select Course</label>
+                                        <select
+                                            required
+                                            value={newSemester.courseId}
+                                            onChange={(e) => setNewSemester({ ...newSemester, courseId: e.target.value })}
+                                            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 border p-2"
+                                        >
+                                            <option value="">-- Select Course --</option>
+                                            {courses.map(c => (
+                                                <option key={c._id} value={c._id}>{c.name} ({c.code})</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Semester Name</label>
+                                        <input
+                                            type="text"
+                                            required
+                                            value={newSemester.name}
+                                            onChange={(e) => setNewSemester({ ...newSemester, name: e.target.value })}
+                                            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 border p-2"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Semester Code</label>
+                                        <input
+                                            type="text"
+                                            required
+                                            value={newSemester.code}
+                                            onChange={(e) => setNewSemester({ ...newSemester, code: e.target.value })}
+                                            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 border p-2"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                                        <textarea
+                                            value={newSemester.description}
+                                            onChange={(e) => setNewSemester({ ...newSemester, description: e.target.value })}
+                                            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 border p-2"
+                                            rows="3"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="mt-6 flex justify-end gap-3">
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowAddModal(false)}
+                                        className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md"
                                     >
-                                        <option value="">-- Select Course --</option>
-                                        {courses.map(c => (
-                                            <option key={c._id} value={c._id}>{c.name} ({c.code})</option>
-                                        ))}
-                                    </select>
+                                        Cancel
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        className="px-4 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700 shadow-sm font-medium"
+                                    >
+                                        Add Semester
+                                    </button>
                                 </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Semester Name</label>
-                                    <input
-                                        type="text"
-                                        required
-                                        value={newSemester.name}
-                                        onChange={(e) => setNewSemester({ ...newSemester, name: e.target.value })}
-                                        className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 border p-2"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Semester Code</label>
-                                    <input
-                                        type="text"
-                                        required
-                                        value={newSemester.code}
-                                        onChange={(e) => setNewSemester({ ...newSemester, code: e.target.value })}
-                                        className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 border p-2"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                                    <textarea
-                                        value={newSemester.description}
-                                        onChange={(e) => setNewSemester({ ...newSemester, description: e.target.value })}
-                                        className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 border p-2"
-                                        rows="3"
-                                    />
-                                </div>
-                            </div>
-                            <div className="mt-6 flex justify-end gap-3">
-                                <button
-                                    type="button"
-                                    onClick={() => setShowAddModal(false)}
-                                    className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    type="submit"
-                                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 shadow-sm"
-                                >
-                                    Add Semester
-                                </button>
-                            </div>
-                        </form>
+                            </form>
+                        </div>
                     </div>
-                </div>
-            )}
-        </div>
+                )
+            }
+        </div >
     );
 };
 

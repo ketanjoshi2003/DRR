@@ -2,6 +2,9 @@ const express = require('express');
 const router = express.Router();
 const Session = require('../models/Session');
 const Pdf = require('../models/Pdf');
+const User = require('../models/User');
+const Course = require('../models/Course');
+const Subject = require('../models/Subject');
 const { protect, authorize } = require('../middleware/auth.middleware');
 
 // @desc    Start unique reading session
@@ -194,6 +197,29 @@ router.get('/history', protect, async (req, res) => {
             .sort('-startTime');
         res.json(sessions);
     } catch (error) {
+        res.status(500).json({ message: 'Server Error', error: error.message });
+    }
+});
+// @desc    Get System Overview Counts
+// @route   GET /api/analytics/overview
+// @access  Admin
+router.get('/overview', protect, authorize('admin'), async (req, res) => {
+    try {
+        const [userCount, courseCount, subjectCount, pdfCount] = await Promise.all([
+            User.countDocuments(),
+            Course.countDocuments(),
+            Subject.countDocuments(),
+            Pdf.countDocuments()
+        ]);
+
+        res.json({
+            users: userCount,
+            courses: courseCount,
+            subjects: subjectCount,
+            pdfs: pdfCount
+        });
+    } catch (error) {
+        console.error(error);
         res.status(500).json({ message: 'Server Error', error: error.message });
     }
 });
