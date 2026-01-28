@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Course = require('../models/Course');
-const auth = require('../middleware/auth.middleware');
+const { protect } = require('../middleware/auth.middleware');
 const multer = require('multer');
 const csv = require('csv-parser');
 const fs = require('fs');
@@ -20,7 +20,7 @@ router.get('/', async (req, res) => {
 });
 
 // Create a new course
-router.post('/', auth, async (req, res) => {
+router.post('/', protect, async (req, res) => {
     const { name, code, description } = req.body;
 
     if (req.user.role !== 'admin') {
@@ -41,7 +41,7 @@ router.post('/', auth, async (req, res) => {
 });
 
 // Upload CSV to import courses
-router.post('/upload', auth, upload.single('file'), async (req, res) => {
+router.post('/upload', protect, upload.single('file'), async (req, res) => {
     if (req.user.role !== 'admin') {
         return res.status(403).json({ message: 'Access denied' });
     }
@@ -107,6 +107,20 @@ router.post('/upload', auth, upload.single('file'), async (req, res) => {
             fs.unlinkSync(req.file.path);
             res.status(500).json({ message: 'Error parsing CSV', error: error.message });
         });
+});
+
+// Delete all courses
+router.delete('/', protect, async (req, res) => {
+    if (req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Access denied' });
+    }
+
+    try {
+        const result = await Course.deleteMany({});
+        res.json({ message: `Deleted all courses. Count: ${result.deletedCount}` });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
 });
 
 module.exports = router;

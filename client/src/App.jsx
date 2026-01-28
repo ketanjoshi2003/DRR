@@ -9,6 +9,9 @@ import AdminDashboard from './components/AdminDashboard';
 import DatabaseManager from './components/DatabaseManager';
 import CourseList from './components/CourseList';
 
+import SubjectList from './components/SubjectList';
+import SemesterList from './components/SemesterList';
+
 const PrivateRoute = ({ children, adminOnly = false }) => {
   const { user, loading } = useAuth();
 
@@ -42,6 +45,16 @@ function AppRoutes() {
             <CourseList />
           </PrivateRoute>
         } />
+        <Route path="/subjects" element={
+          <PrivateRoute>
+            <SubjectList />
+          </PrivateRoute>
+        } />
+        <Route path="/semesters" element={
+          <PrivateRoute>
+            <SemesterList />
+          </PrivateRoute>
+        } />
         <Route path="/read/:id" element={
           <PrivateRoute>
             <PDFReader />
@@ -67,12 +80,16 @@ function AppRoutes() {
   );
 }
 
+import ErrorBoundary from './components/ErrorBoundary';
+
 function App() {
   return (
     <Router>
-      <AuthProvider>
-        <AppRoutes />
-      </AuthProvider>
+      <ErrorBoundary>
+        <AuthProvider>
+          <AppRoutes />
+        </AuthProvider>
+      </ErrorBoundary>
     </Router>
   );
 }

@@ -1,27 +1,35 @@
 import { useEffect, useState, useRef } from 'react';
-import { Plus, Book, Upload } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Plus, Book, Upload, Trash2 } from 'lucide-react';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 
 const CourseList = () => {
     const [courses, setCourses] = useState([]);
+    const [semesters, setSemesters] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [selectedSemesters, setSelectedSemesters] = useState({}); // { courseId: semesterId }
     const [showAddModal, setShowAddModal] = useState(false);
     const [newCourse, setNewCourse] = useState({ name: '', code: '', description: '' });
     const { user } = useAuth();
+    const navigate = useNavigate();
     const fileInputRef = useRef(null);
     const [uploading, setUploading] = useState(false);
 
     useEffect(() => {
-        fetchCourses();
+        fetchData();
     }, []);
 
-    const fetchCourses = async () => {
+    const fetchData = async () => {
         try {
-            const { data } = await api.get('/courses');
-            setCourses(data);
+            const [coursesRes, semestersRes] = await Promise.all([
+                api.get('/courses'),
+                api.get('/semesters')
+            ]);
+            setCourses(coursesRes.data);
+            setSemesters(Array.isArray(semestersRes.data) ? semestersRes.data : []);
         } catch (error) {
-            console.error('Error fetching courses:', error);
+            console.error('Error fetching data:', error);
         } finally {
             setLoading(false);
         }
@@ -33,10 +41,24 @@ const CourseList = () => {
             await api.post('/courses', newCourse);
             setShowAddModal(false);
             setNewCourse({ name: '', code: '', description: '' });
-            fetchCourses();
+            fetchData();
         } catch (error) {
             console.error('Error adding course:', error);
             alert('Failed to add course');
+        }
+    };
+
+    const handleDeleteAllCourses = async () => {
+        if (!window.confirm('Are you sure you want to delete ALL courses? This action cannot be undone.')) {
+            return;
+        }
+        try {
+            await api.delete('/courses');
+            alert('All courses deleted successfully.');
+            fetchData();
+        } catch (error) {
+            console.error('Error deleting courses:', error);
+            alert('Failed to delete courses');
         }
     };
 
@@ -55,16 +77,33 @@ const CourseList = () => {
                 },
             });
             alert('Courses uploaded successfully!');
-            fetchCourses();
+            fetchData();
         } catch (error) {
             console.error('Error uploading CSV:', error);
-            alert('Failed to upload courses.');
+            const msg = error.response?.data?.message || error.message;
+            alert(`Failed to upload courses: ${msg}`);
         } finally {
             setUploading(false);
             if (fileInputRef.current) {
                 fileInputRef.current.value = '';
             }
         }
+    };
+
+    const handleSemesterChange = (courseId, semesterId) => {
+        setSelectedSemesters(prev => ({
+            ...prev,
+            [courseId]: semesterId
+        }));
+    };
+
+    const handleViewSubjects = (courseId) => {
+        const semesterId = selectedSemesters[courseId];
+        let url = `/subjects?courseId=${courseId}`;
+        if (semesterId && semesterId !== 'all') {
+            url += `&semesterId=${semesterId}`;
+        }
+        navigate(url);
     };
 
     if (loading) return <div>Loading courses...</div>;
@@ -82,6 +121,13 @@ const CourseList = () => {
                             onChange={handleFileUpload}
                             className="hidden"
                         />
+                        <button
+                            onClick={handleDeleteAllCourses}
+                            className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+                        >
+                            <Trash2 className="w-4 h-4" />
+                            Delete All
+                        </button>
                         <button
                             onClick={() => fileInputRef.current?.click()}
                             disabled={uploading}
@@ -102,20 +148,55 @@ const CourseList = () => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {courses.map((course) => (
-                    <div key={course._id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
-                        <div className="flex items-start justify-between mb-4">
-                            <div className="p-3 bg-blue-50 rounded-lg">
-                                <Book className="w-8 h-8 text-blue-600" />
+                {courses.map((course) => {
+                    const courseSemesters = semesters.filter(s => s.course?._id === course._id);
+
+                    return (
+                        <div key={course._id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow flex flex-col h-full">
+                            <div className="flex-1">
+                                <div className="flex items-start justify-between mb-4">
+                                    <div className="p-3 bg-blue-50 rounded-lg">
+                                        <Book className="w-8 h-8 text-blue-600" />
+                                    </div>
+                                </div>
+                                <h3 className="text-lg font-medium text-gray-900">{course.name}</h3>
+                                <p className="text-sm text-gray-500 font-mono mt-1">{course.code}</p>
+                                <p className="mt-2 text-gray-600 text-sm line-clamp-3">
+                                    {course.description || 'No description available.'}
+                                </p>
+
+                                {/* Semester Dropdown */}
+                                <div className="mt-4">
+                                    <label className="text-xs text-gray-500 font-medium uppercase tracking-wide">Select Semester</label>
+                                    <select
+                                        className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md border"
+                                        value={selectedSemesters[course._id] || ''}
+                                        onChange={(e) => handleSemesterChange(course._id, e.target.value)}
+                                    >
+                                        <option value="all">All Semesters</option>
+                                        {courseSemesters.map(sem => (
+                                            <option key={sem._id} value={sem._id}>{sem.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+                            <div className="mt-6 pt-4 border-t border-gray-100 flex justify-between items-center">
+                                <button
+                                    onClick={() => handleViewSubjects(course._id)}
+                                    className="flex-1 text-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors"
+                                >
+                                    View Subjects
+                                </button>
+                                <button
+                                    onClick={() => navigate(`/semesters?courseId=${course._id}`)}
+                                    className="ml-3 text-sm text-gray-500 hover:text-gray-700 font-medium hover:underline"
+                                >
+                                    Manage Semesters
+                                </button>
                             </div>
                         </div>
-                        <h3 className="text-lg font-medium text-gray-900">{course.name}</h3>
-                        <p className="text-sm text-gray-500 font-mono mt-1">{course.code}</p>
-                        <p className="mt-2 text-gray-600 text-sm line-clamp-3">
-                            {course.description || 'No description available.'}
-                        </p>
-                    </div>
-                ))}
+                    );
+                })}
             </div>
 
             {courses.length === 0 && (
