@@ -1,6 +1,6 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { BookOpen, LogOut, Upload, BarChart, Database, Book } from 'lucide-react';
+import { BookOpen, LogOut, Upload, BarChart, Database, Book, GraduationCap, Calendar, LayoutGrid } from 'lucide-react';
 
 const Layout = () => {
     const { user, logout } = useAuth();
@@ -24,11 +24,11 @@ const Layout = () => {
                     </div>
                     <nav className="mt-2">
                         <NavLink to="/" className={({ isActive }) => `flex items-center gap-3 px-6 py-3 transition-colors ${isActive ? 'bg-blue-50 text-blue-600 border-r-2 border-blue-600' : 'text-gray-700 hover:bg-gray-50 hover:text-blue-600'}`}>
-                            <BookOpen className="w-5 h-5" />
+                            <LayoutGrid className="w-5 h-5" />
                             Library
                         </NavLink>
                         <NavLink to="/courses" className={({ isActive }) => `flex items-center gap-3 px-6 py-3 transition-colors ${isActive ? 'bg-blue-50 text-blue-600 border-r-2 border-blue-600' : 'text-gray-700 hover:bg-gray-50 hover:text-blue-600'}`}>
-                            <BookOpen className="w-5 h-5" />
+                            <GraduationCap className="w-5 h-5" />
                             Courses
                         </NavLink>
                         <NavLink to="/subjects" className={({ isActive }) => `flex items-center gap-3 px-6 py-3 transition-colors ${isActive ? 'bg-blue-50 text-blue-600 border-r-2 border-blue-600' : 'text-gray-700 hover:bg-gray-50 hover:text-blue-600'}`}>
@@ -36,7 +36,7 @@ const Layout = () => {
                             Subjects
                         </NavLink>
                         <NavLink to="/semesters" className={({ isActive }) => `flex items-center gap-3 px-6 py-3 transition-colors ${isActive ? 'bg-blue-50 text-blue-600 border-r-2 border-blue-600' : 'text-gray-700 hover:bg-gray-50 hover:text-blue-600'}`}>
-                            <Book className="w-5 h-5" />
+                            <Calendar className="w-5 h-5" />
                             Semesters
                         </NavLink>
                         {user?.role === 'admin' && (

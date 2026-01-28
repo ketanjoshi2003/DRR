@@ -24,10 +24,11 @@ if (!fs.existsSync(uploadDir)) {
 
 // Routes
 app.use('/api/auth', require('./routes/auth.routes'));
-app.use('/api/pdfs', require('./routes/pdf.routes'));
-app.use('/api/courses', require('./routes/course.routes'));
+app.use('/api/courses', require('./routes/course.routes')); // Placeholder if needed
+app.use('/api/semesters', require('./routes/semester.routes')); // Placeholder if needed
 app.use('/api/subjects', require('./routes/subject.routes'));
-app.use('/api/semesters', require('./routes/semester.routes'));
+app.use('/api/pdfs', require('./routes/pdf.routes'));
+app.use('/api/notes', require('./routes/note.routes'));
 app.use('/api/analytics', require('./routes/analytics.routes'));
 app.get('/', (req, res) => {
     res.send('Digital Room Reader API is running');

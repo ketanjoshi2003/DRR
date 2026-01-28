@@ -13,16 +13,34 @@ const SubjectSchema = new mongoose.Schema({
     description: {
         type: String
     },
-    course: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Course',
+    courseCode: {
+        type: String,
         required: true
     },
-    semester: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Semester',
+    semesterCode: {
+        type: String,
         required: true
     }
-}, { timestamps: true });
+}, {
+    timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true }
+});
+
+// Virtual for Course
+SubjectSchema.virtual('course', {
+    ref: 'Course',
+    localField: 'courseCode',
+    foreignField: 'code',
+    justOne: true
+});
+
+// Virtual for Semester
+SubjectSchema.virtual('semester', {
+    ref: 'Semester',
+    localField: 'semesterCode',
+    foreignField: 'code',
+    justOne: true
+});
 
 module.exports = mongoose.model('Subject', SubjectSchema);

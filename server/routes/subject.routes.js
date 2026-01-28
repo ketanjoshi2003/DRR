@@ -11,6 +11,7 @@ const fs = require('fs');
 const upload = multer({ dest: 'uploads/' });
 
 // Get all subjects
+// Get all subjects
 router.get('/', async (req, res) => {
     try {
         const subjects = await Subject.find()
@@ -25,7 +26,7 @@ router.get('/', async (req, res) => {
 
 // Create a new subject
 router.post('/', protect, async (req, res) => {
-    const { name, code, description, courseId, semesterId } = req.body;
+    const { name, code, description, courseCode, semesterCode } = req.body;
 
     if (req.user.role !== 'admin') {
         return res.status(403).json({ message: 'Access denied' });
@@ -36,8 +37,8 @@ router.post('/', protect, async (req, res) => {
             name,
             code,
             description,
-            course: courseId,
-            semester: semesterId
+            courseCode,
+            semesterCode
         });
         const savedSubject = await newSubject.save();
         res.status(201).json(savedSubject);
@@ -47,7 +48,7 @@ router.post('/', protect, async (req, res) => {
 });
 
 // Upload CSV to import subjects
-// Expected CSV headers: name, code, description, courseCode
+// Expected CSV headers: name, code, description, courseCode, semesterCode
 router.post('/upload', protect, upload.single('file'), async (req, res) => {
     if (req.user.role !== 'admin') {
         return res.status(403).json({ message: 'Access denied' });
@@ -58,7 +59,6 @@ router.post('/upload', protect, upload.single('file'), async (req, res) => {
     }
 
     const results = [];
-    const errors = [];
 
     fs.createReadStream(req.file.path)
         .pipe(csv())
@@ -82,61 +82,30 @@ router.post('/upload', protect, upload.single('file'), async (req, res) => {
             }
 
             try {
-                // Fetch all courses and semesters
-                const [courses, semesters] = await Promise.all([
-                    Course.find({}),
-                    Semester.find({})
-                ]);
-
-                const courseMap = {}; // code -> _id
-                courses.forEach(c => {
-                    courseMap[c.code] = c._id;
-                    courseMap[c.code.toLowerCase()] = c._id;
-                });
-
-                const semesterMap = {}; // code -> _id
-                semesters.forEach(s => {
-                    semesterMap[s.code] = s._id;
-                    semesterMap[s.code.toLowerCase()] = s._id;
-                });
-
-                const bulkOps = [];
-
-                for (const row of results) {
-                    const courseId = courseMap[row.coursecode] || courseMap[row.coursecode.toLowerCase()];
-                    const semesterId = semesterMap[row.semestercode] || semesterMap[row.semestercode.toLowerCase()];
-
-                    if (courseId && semesterId) {
-                        bulkOps.push({
-                            updateOne: {
-                                filter: { code: row.code },
-                                update: {
-                                    $set: {
-                                        name: row.name,
-                                        code: row.code,
-                                        description: row.description,
-                                        course: courseId,
-                                        semester: semesterId
-                                    }
-                                },
-                                upsert: true
+                const bulkOps = results.map(row => ({
+                    updateOne: {
+                        filter: { code: row.code },
+                        update: {
+                            $set: {
+                                name: row.name,
+                                code: row.code,
+                                description: row.description,
+                                courseCode: row.coursecode, // Directly save the code
+                                semesterCode: row.semestercode // Directly save the code
                             }
-                        });
+                        },
+                        upsert: true
                     }
-                }
+                }));
 
-                if (bulkOps.length > 0) {
-                    const result = await Subject.bulkWrite(bulkOps);
-                    res.json({
-                        message: 'CSV processing completed',
-                        inserted: result.upsertedCount,
-                        updated: result.modifiedCount,
-                        matched: result.matchedCount,
-                        skipped: results.length - bulkOps.length
-                    });
-                } else {
-                    res.status(400).json({ message: 'No matching courses found for the provided courseCodes.' });
-                }
+                const result = await Subject.bulkWrite(bulkOps);
+                res.json({
+                    message: 'CSV processing completed',
+                    inserted: result.upsertedCount,
+                    updated: result.modifiedCount,
+                    matched: result.matchedCount,
+                    skipped: results.length - bulkOps.length
+                });
 
             } catch (error) {
                 console.error('Bulk write error:', error);

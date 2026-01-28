@@ -1,7 +1,6 @@
 Connected to DB
 Total Subjects: 14
 Total Semesters: 16
-Orphaned Subjects (no semester link): 0
-Subjects seemingly in Semester 1: 6
-First Semester ID: 6979d242977f392273bd687a
-First Subject Semester ID: 6979d242977f392273bd687a
+Orphaned Subjects (no semester link): 14
+Subjects seemingly in Semester 1: 0
+First Semester ID: 6979d4d6977f392273bd6b22
