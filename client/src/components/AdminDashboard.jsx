@@ -180,7 +180,7 @@ const AdminDashboard = ({ tab = 'upload' }) => {
                             onClick={() => navigate('/courses')}
                             className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm flex items-center justify-between relative overflow-hidden cursor-pointer hover:shadow-md transition-all group"
                         >
-                            <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-br from-white/0 to-indigo-50/50 rounded-bl-full -mr-2 -mt-2"></div>
+
                             <div>
                                 <p className="text-sm font-medium text-gray-500 group-hover:text-indigo-600 transition-colors">Active Courses</p>
                                 <p className="text-2xl font-bold text-gray-900 mt-1">{overviewStats.courses}</p>
@@ -193,7 +193,7 @@ const AdminDashboard = ({ tab = 'upload' }) => {
                             onClick={() => navigate('/subjects')}
                             className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm flex items-center justify-between relative overflow-hidden cursor-pointer hover:shadow-md transition-all group"
                         >
-                            <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-br from-white/0 to-indigo-50/50 rounded-bl-full -mr-2 -mt-2"></div>
+
                             <div>
                                 <p className="text-sm font-medium text-gray-500 group-hover:text-indigo-600 transition-colors">Total Subjects</p>
                                 <p className="text-2xl font-bold text-gray-900 mt-1">{overviewStats.subjects}</p>

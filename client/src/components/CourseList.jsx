@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Book, Upload, Trash2 } from 'lucide-react';
+import { Plus, Book, Upload, Trash2, Search } from 'lucide-react';
 import CustomSelect from './CustomSelect';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
@@ -15,7 +15,11 @@ const CourseList = () => {
     const { user } = useAuth();
     const navigate = useNavigate();
     const fileInputRef = useRef(null);
+
     const [uploading, setUploading] = useState(false);
+    const [isDeleteMode, setIsDeleteMode] = useState(false);
+    const [selectedIds, setSelectedIds] = useState([]);
+    const [searchQuery, setSearchQuery] = useState('');
 
     useEffect(() => {
         fetchData();
@@ -49,17 +53,41 @@ const CourseList = () => {
         }
     };
 
-    const handleDeleteAllCourses = async () => {
-        if (!window.confirm('Are you sure you want to delete ALL courses? This action cannot be undone.')) {
+    const handleDeleteSelected = async () => {
+        if (selectedIds.length === 0) return;
+
+        if (!window.confirm(`Are you sure you want to delete ${selectedIds.length} courses? This action cannot be undone.`)) {
             return;
         }
+
         try {
-            await api.delete('/courses');
-            alert('All courses deleted successfully.');
+            await api.delete('/courses', { data: { ids: selectedIds } });
+            alert('Selected courses deleted successfully.');
+            setSelectedIds([]);
+            setIsDeleteMode(false);
             fetchData();
         } catch (error) {
             console.error('Error deleting courses:', error);
             alert('Failed to delete courses');
+        }
+    };
+
+    const toggleSelection = (id) => {
+        setSelectedIds(prev =>
+            prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+        );
+    };
+
+    const filteredCourses = courses.filter(course =>
+        course.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        course.code.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
+    const handleSelectAll = () => {
+        if (selectedIds.length === filteredCourses.length) {
+            setSelectedIds([]);
+        } else {
+            setSelectedIds(filteredCourses.map(c => c._id));
         }
     };
 
@@ -111,54 +139,116 @@ const CourseList = () => {
 
     return (
         <div>
-            <div className="flex justify-between items-center mb-6">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
                 <h1 className="text-2xl font-bold">Courses</h1>
-                {user?.role === 'admin' && (
-                    <div className="flex gap-3">
+
+                <div className="flex flex-col md:flex-row gap-3 items-center w-full md:w-auto">
+                    <div className="relative w-full md:w-[200px]">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <Search className="h-5 w-5 text-gray-400" />
+                        </div>
                         <input
-                            type="file"
-                            accept=".csv"
-                            ref={fileInputRef}
-                            onChange={handleFileUpload}
-                            className="hidden"
+                            type="text"
+                            placeholder="Search Courses..."
+                            className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-brand-500 focus:border-brand-500 sm:text-sm"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
                         />
-                        <button
-                            onClick={handleDeleteAllCourses}
-                            className="flex items-center gap-2 px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
-                        >
-                            <Trash2 className="w-4 h-4" />
-                            Delete All
-                        </button>
-                        <button
-                            onClick={() => fileInputRef.current?.click()}
-                            disabled={uploading}
-                            className="flex items-center gap-2 px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 text-sm font-medium"
-                        >
-                            <Upload className="w-4 h-4" />
-                            {uploading ? 'Uploading...' : 'Upload CSV'}
-                        </button>
-                        <button
-                            onClick={() => setShowAddModal(true)}
-                            className="flex items-center gap-2 px-3 py-1.5 bg-brand-600 text-white rounded-lg hover:bg-brand-700 transition-colors text-sm font-medium"
-                        >
-                            <Plus className="w-4 h-4" />
-                            Add Course
-                        </button>
                     </div>
-                )}
+
+                    {user?.role === 'admin' && (
+                        <div className="flex flex-wrap gap-3 items-center">
+                            <input
+                                type="file"
+                                accept=".csv"
+                                ref={fileInputRef}
+                                onChange={handleFileUpload}
+                                className="hidden"
+                            />
+
+                            {!isDeleteMode ? (
+                                <button
+                                    onClick={() => setIsDeleteMode(true)}
+                                    className="flex items-center gap-2 px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
+                                >
+                                    <Trash2 className="w-4 h-4" />
+                                    Delete
+                                </button>
+                            ) : (
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={handleSelectAll}
+                                        className="px-3 py-1.5 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 text-sm font-medium"
+                                    >
+                                        {selectedIds.length === filteredCourses.length ? 'Deselect All' : 'Select All'}
+                                    </button>
+                                    <button
+                                        onClick={handleDeleteSelected}
+                                        disabled={selectedIds.length === 0}
+                                        className="px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 text-sm font-medium"
+                                    >
+                                        Delete ({selectedIds.length})
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            setIsDeleteMode(false);
+                                            setSelectedIds([]);
+                                        }}
+                                        className="px-3 py-1.5 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium"
+                                    >
+                                        Cancel
+                                    </button>
+                                </div>
+                            )}
+                            <button
+                                onClick={() => fileInputRef.current?.click()}
+                                disabled={uploading || isDeleteMode}
+                                className={`flex items-center gap-2 px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 text-sm font-medium ${isDeleteMode ? 'opacity-50 pointer-events-none' : ''}`}
+                            >
+                                <Upload className="w-4 h-4" />
+                                {uploading ? 'Uploading...' : 'Upload CSV'}
+                            </button>
+                            <button
+                                onClick={() => setShowAddModal(true)}
+                                disabled={isDeleteMode}
+                                className={`flex items-center gap-2 px-3 py-1.5 bg-brand-600 text-white rounded-lg hover:bg-brand-700 transition-colors text-sm font-medium ${isDeleteMode ? 'opacity-50 pointer-events-none' : ''}`}
+                            >
+                                <Plus className="w-4 h-4" />
+                                Add Course
+                            </button>
+                        </div>
+                    )}
+                </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {courses.map((course) => {
+                {filteredCourses.map((course) => {
                     const courseSemesters = semesters.filter(s => s.course?._id === course._id);
 
                     return (
-                        <div key={course._id} className="bg-white rounded-xl border border-gray-200 p-6 hover:border-brand-300 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 transform-gpu flex flex-col h-full">
+                        <div
+                            key={course._id}
+                            className={`bg-white rounded-xl border p-6 transition-all duration-300 transform-gpu flex flex-col h-full ${isDeleteMode
+                                ? 'cursor-pointer hover:bg-red-50 border-red-200'
+                                : 'border-gray-200 hover:border-brand-300 hover:shadow-lg hover:-translate-y-1'
+                                } ${selectedIds.includes(course._id) ? 'ring-2 ring-red-500 bg-red-50' : ''}`}
+                            onClick={() => isDeleteMode && toggleSelection(course._id)}
+                        >
                             <div className="flex-1">
                                 <div className="flex items-start justify-between mb-4">
                                     <div className="p-3 bg-brand-50 rounded-lg">
                                         <Book className="w-8 h-8 text-brand-600" />
                                     </div>
+                                    {isDeleteMode && (
+                                        <div className="flex items-center">
+                                            <input
+                                                type="checkbox"
+                                                checked={selectedIds.includes(course._id)}
+                                                onChange={() => toggleSelection(course._id)}
+                                                className="w-5 h-5 text-brand-600 rounded border-gray-300 focus:ring-brand-500 cursor-pointer"
+                                            />
+                                        </div>
+                                    )}
                                 </div>
                                 <h3 className="text-lg font-medium text-gray-900">{course.name}</h3>
                                 <p className="text-sm text-gray-500 font-mono mt-1">{course.code}</p>

@@ -116,6 +116,41 @@ router.get('/:id/stream', protect, async (req, res) => {
     }
 });
 
+// @desc    Batch Delete PDFs
+// @route   DELETE /api/pdfs
+// @access  Admin
+router.delete('/', protect, authorize('admin'), async (req, res) => {
+    try {
+        const { ids } = req.body;
+
+        if (ids && Array.isArray(ids) && ids.length > 0) {
+            // Find PDFs to get filenames
+            const pdfsToDelete = await Pdf.find({ _id: { $in: ids } });
+
+            // Delete files
+            pdfsToDelete.forEach(pdf => {
+                const filePath = path.join(__dirname, '..', process.env.UPLOAD_PATH || 'uploads', pdf.filename);
+                if (fs.existsSync(filePath)) {
+                    try {
+                        fs.unlinkSync(filePath);
+                    } catch (err) {
+                        console.error(`Failed to delete file: ${filePath}`, err);
+                    }
+                }
+            });
+
+            // Delete DB records
+            await Pdf.deleteMany({ _id: { $in: ids } });
+            res.json({ message: 'Selected PDFs deleted successfully' });
+        } else {
+            res.status(400).json({ message: 'No IDs provided for deletion' });
+        }
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server Error', error: error.message });
+    }
+});
+
 // @desc    Delete PDF
 // @route   DELETE /api/pdfs/:id
 // @access  Admin
@@ -133,14 +168,10 @@ router.delete('/:id', protect, authorize('admin'), async (req, res) => {
             fs.unlinkSync(filePath);
         }
 
-        await pdf.remove();
+        await Pdf.deleteOne({ _id: req.params.id });
         res.json({ message: 'PDF removed' });
     } catch (error) {
-        // Handle Mongoose deprecation
-        if (error.message.includes('remove is not a function')) {
-            await Pdf.findByIdAndDelete(req.params.id);
-            return res.json({ message: 'PDF removed' });
-        }
+        console.error(error);
         res.status(500).json({ message: 'Server Error', error: error.message });
     }
 });

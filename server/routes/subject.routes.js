@@ -119,14 +119,22 @@ router.post('/upload', protect, upload.single('file'), async (req, res) => {
 });
 
 // Delete all subjects
+// Delete subjects (all or specific list)
 router.delete('/', protect, async (req, res) => {
     if (req.user.role !== 'admin') {
         return res.status(403).json({ message: 'Access denied' });
     }
 
     try {
-        const result = await Subject.deleteMany({});
-        res.json({ message: `Deleted all subjects. Count: ${result.deletedCount}` });
+        const { ids } = req.body;
+        let result;
+        if (ids && Array.isArray(ids) && ids.length > 0) {
+            result = await Subject.deleteMany({ _id: { $in: ids } });
+            res.json({ message: `Deleted ${result.deletedCount} subjects` });
+        } else {
+            result = await Subject.deleteMany({});
+            res.json({ message: `Deleted all subjects. Count: ${result.deletedCount}` });
+        }
     } catch (err) {
         res.status(500).json({ message: err.message });
     }

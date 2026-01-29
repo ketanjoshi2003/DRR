@@ -110,14 +110,22 @@ router.post('/upload', protect, upload.single('file'), async (req, res) => {
 });
 
 // Delete all courses
+// Delete courses (all or specific list)
 router.delete('/', protect, async (req, res) => {
     if (req.user.role !== 'admin') {
         return res.status(403).json({ message: 'Access denied' });
     }
 
     try {
-        const result = await Course.deleteMany({});
-        res.json({ message: `Deleted all courses. Count: ${result.deletedCount}` });
+        const { ids } = req.body;
+        let result;
+        if (ids && Array.isArray(ids) && ids.length > 0) {
+            result = await Course.deleteMany({ _id: { $in: ids } });
+            res.json({ message: `Deleted ${result.deletedCount} courses` });
+        } else {
+            result = await Course.deleteMany({});
+            res.json({ message: `Deleted all courses. Count: ${result.deletedCount}` });
+        }
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
