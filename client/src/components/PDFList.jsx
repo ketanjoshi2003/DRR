@@ -154,20 +154,51 @@ const PDFList = () => {
                                     <FileText className="w-8 h-8 text-brand-600" />
                                 </div>
                             </div>
-                            <h3 className="mt-4 text-lg font-medium text-gray-900 truncate" title={pdf.title}>
+                            <h3 className="mt-4 text-lg font-bold text-gray-900 truncate" title={pdf.title}>
                                 {pdf.title}
                             </h3>
-                            <p className="mt-1 text-sm text-gray-500">
-                                {pdf.uploadedBy?.name || 'Unknown Author'}
-                            </p>
-                            <div className="mt-4 flex items-center text-xs text-gray-400 gap-4">
-                                <span className="flex items-center gap-1">
-                                    {(pdf.size / 1024 / 1024).toFixed(2)} MB
+
+                            {/* Metadata Display */}
+                            <div className="mt-2 space-y-1">
+                                {pdf.metadata?.author && (
+                                    <p className="text-sm text-gray-700 font-medium truncate">
+                                        by {pdf.metadata.author}
+                                    </p>
+                                )}
+                                {pdf.metadata?.subject && (
+                                    <p className="text-xs text-gray-500 truncate" title={pdf.metadata.subject}>
+                                        {pdf.metadata.subject}
+                                    </p>
+                                )}
+                            </div>
+
+                            <div className="mt-4 flex flex-wrap items-center gap-2">
+                                {/* File Info Badges */}
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">
+                                    {(pdf.size / 1024 / 1024).toFixed(1)} MB
                                 </span>
+
+                                {pdf.numPages > 0 && (
+                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">
+                                        {pdf.numPages} p
+                                    </span>
+                                )}
+
+                                {/* Feature Badges */}
+                                {pdf.isSearchable && (
+                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800" title="Text is searchable">
+                                        {pdf.ocrText ? 'OCR' : 'Text'}
+                                    </span>
+                                )}
+                            </div>
+
+                            <div className="mt-2 flex items-center text-xs text-gray-400 gap-2">
                                 <span className="flex items-center gap-1">
                                     <Clock className="w-3 h-3" />
                                     {new Date(pdf.createdAt).toLocaleDateString()}
                                 </span>
+                                <span className="text-gray-300">|</span>
+                                <span>Up: {pdf.uploadedBy?.name || 'Admin'}</span>
                             </div>
 
                             {!isDeleteMode && (

@@ -3,12 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 import { Upload, BarChart, FileText, Users, Clock, AlertCircle, CheckCircle, Search, GraduationCap, BookOpen, Trash2 } from 'lucide-react';
 
+import BulkUpload from './BulkUpload';
+
 const AdminDashboard = ({ tab = 'upload' }) => {
     const navigate = useNavigate();
-    const [file, setFile] = useState(null);
-    const [title, setTitle] = useState('');
-    const [uploading, setUploading] = useState(false);
-    const [message, setMessage] = useState({ type: '', text: '' });
     const [stats, setStats] = useState([]);
     const [userStats, setUserStats] = useState([]);
     const [loadingStats, setLoadingStats] = useState(false);
@@ -71,94 +69,22 @@ const AdminDashboard = ({ tab = 'upload' }) => {
             setManageData(prev => prev.filter(item => item._id !== id));
             // Refresh stats to keep counts accurate
             fetchStats();
-            setMessage({ type: 'success', text: `${type === 'users' ? 'User' : 'PDF'} deleted successfully` });
+            alert(`${type === 'users' ? 'User' : 'PDF'} deleted successfully`);
         } catch (error) {
             console.error('Delete error:', error);
-            setMessage({ type: 'error', text: 'Delete failed' });
+            alert('Delete failed');
         }
     };
 
-    const handleUpload = async (e) => {
-        e.preventDefault();
-        if (!file) {
-            setMessage({ type: 'error', text: 'Please select a file' });
-            return;
-        }
 
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('title', title || file.name);
-
-        setUploading(true);
-        setMessage({ type: '', text: '' });
-
-        try {
-            await api.post('/pdfs/upload', formData, {
-                headers: { 'Content-Type': 'multipart/form-data' }
-            });
-            setMessage({ type: 'success', text: 'PDF uploaded successfully' });
-            setFile(null);
-            setTitle('');
-        } catch (error) {
-            setMessage({ type: 'error', text: error.response?.data?.message || 'Upload failed' });
-        } finally {
-            setUploading(false);
-        }
-    };
 
     return (
         <div>
 
 
             {tab === 'upload' ? (
-                <div className="max-w-xl">
-                    {/* ... upload form ... */}
-                    <h2 className="text-xl font-bold mb-6">Upload New PDF</h2>
-                    <form onSubmit={handleUpload} className="space-y-6 bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-                        {message.text && (
-                            <div className={`p-4 rounded-md flex items-center gap-2 ${message.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
-                                {message.type === 'success' ? <CheckCircle className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}
-                                {message.text}
-                            </div>
-                        )}
-
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">PDF Title (Optional)</label>
-                            <input
-                                type="text"
-                                value={title}
-                                onChange={(e) => setTitle(e.target.value)}
-                                className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-brand-500 focus:border-brand-500 sm:text-sm p-2 border"
-                                placeholder="Enter custom title"
-                            />
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">PDF File</label>
-                            <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md hover:bg-gray-50 transition-colors">
-                                <div className="space-y-1 text-center">
-                                    <FileText className="mx-auto h-12 w-12 text-gray-400" />
-                                    <div className="flex text-sm text-gray-600">
-                                        <label htmlFor="file-upload" className="relative cursor-pointer bg-white rounded-md font-medium text-brand-600 hover:text-brand-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-brand-500">
-                                            <span>Upload a file</span>
-                                            <input id="file-upload" name="file-upload" type="file" className="sr-only" accept=".pdf" onChange={(e) => setFile(e.target.files[0])} />
-                                        </label>
-                                        <p className="pl-1">or drag and drop</p>
-                                    </div>
-                                    <p className="text-xs text-gray-500">PDF up to 50MB</p>
-                                    {file && <p className="text-sm font-bold text-gray-700 mt-2">{file.name}</p>}
-                                </div>
-                            </div>
-                        </div>
-
-                        <button
-                            type="submit"
-                            disabled={uploading}
-                            className={`w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-brand-600 hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-500 ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}
-                        >
-                            {uploading ? 'Uploading...' : 'Upload PDF'}
-                        </button>
-                    </form>
+                <div className="max-w-4xl">
+                    <BulkUpload />
                 </div>
             ) : (
                 <div>
@@ -245,8 +171,8 @@ const AdminDashboard = ({ tab = 'upload' }) => {
                                                                         </>
                                                                     ) : (
                                                                         <>
-                                                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Title</th>
-                                                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Size</th>
+                                                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Title/Author</th>
+                                                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Info</th>
                                                                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Uploaded</th>
                                                                             <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
                                                                         </>
@@ -274,8 +200,19 @@ const AdminDashboard = ({ tab = 'upload' }) => {
                                                                             </>
                                                                         ) : (
                                                                             <>
-                                                                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 truncate max-w-xs" title={item.title}>{item.title}</td>
-                                                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{(item.size / 1024 / 1024).toFixed(2)} MB</td>
+                                                                                <td className="px-6 py-4 text-sm font-medium text-gray-900 truncate max-w-xs">
+                                                                                    <div className="truncate" title={item.title}>{item.title}</div>
+                                                                                    {item.metadata?.author && <div className="text-xs text-gray-500 truncate">by {item.metadata.author}</div>}
+                                                                                </td>
+                                                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                                                    <div className="flex flex-col gap-1">
+                                                                                        <span>{(item.size / 1024 / 1024).toFixed(2)} MB</span>
+                                                                                        <div className="flex gap-1">
+                                                                                            {item.numPages > 0 && <span className="bg-gray-100 px-1.5 rounded text-xs">{item.numPages}p</span>}
+                                                                                            {item.isSearchable && <span className="bg-green-100 text-green-800 px-1.5 rounded text-xs">{item.ocrText ? 'OCR' : 'Text'}</span>}
+                                                                                        </div>
+                                                                                    </div>
+                                                                                </td>
                                                                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(item.createdAt).toLocaleDateString()}</td>
                                                                                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                                                                     <button onClick={() => handleDeleteItem(item._id, 'pdfs')} className="text-red-600 hover:text-red-900">
