@@ -175,6 +175,27 @@ router.get('/', protect, async (req, res) => {
     }
 });
 
+// @desc    Get single PDF details
+// @route   GET /api/pdfs/:id
+// @access  Private
+router.get('/:id', protect, async (req, res) => {
+    try {
+        const pdf = await Pdf.findById(req.params.id).populate('uploadedBy', 'name');
+
+        if (!pdf) {
+            return res.status(404).json({ message: 'PDF not found' });
+        }
+
+        res.json(pdf);
+    } catch (error) {
+        // If ID is invalid (CastError), return 404
+        if (error.name === 'CastError') {
+            return res.status(404).json({ message: 'PDF not found' });
+        }
+        res.status(500).json({ message: 'Server Error', error: error.message });
+    }
+});
+
 // @desc    Stream PDF
 // @route   GET /api/pdfs/:id/stream
 // @access  Private
@@ -278,6 +299,34 @@ router.delete('/:id', protect, authorize('admin'), async (req, res) => {
 
         await Pdf.deleteOne({ _id: req.params.id });
         res.json({ message: 'PDF removed' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server Error', error: error.message });
+    }
+});
+
+// @desc    Update PDF metadata
+// @route   PUT /api/pdfs/:id
+// @access  Admin
+router.put('/:id', protect, authorize('admin'), async (req, res) => {
+    try {
+        const { title, metadata } = req.body;
+        const pdf = await Pdf.findById(req.params.id);
+
+        if (!pdf) {
+            return res.status(404).json({ message: 'PDF not found' });
+        }
+
+        if (title) pdf.title = title;
+        if (metadata) {
+            pdf.metadata = {
+                ...pdf.metadata,
+                ...metadata
+            };
+        }
+
+        await pdf.save();
+        res.json(pdf);
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Server Error', error: error.message });

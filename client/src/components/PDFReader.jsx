@@ -2,7 +2,9 @@ import { useState, useEffect, useRef, memo, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Document, Page, pdfjs } from 'react-pdf';
 import api from '../api/axios';
-import { ChevronLeft, ChevronRight, Maximize, Minimize, MessageSquare, Plus, X, Trash2, ZoomIn, ZoomOut } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { ChevronLeft, ChevronRight, Maximize, Minimize, MessageSquare, Plus, X, Trash2, ZoomIn, ZoomOut, Info, CheckCircle } from 'lucide-react';
+import MetadataModal from './MetadataModal';
 import 'react-pdf/dist/Page/TextLayer.css';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 
@@ -72,6 +74,24 @@ const PDFReader = () => {
     const [showNotes, setShowNotes] = useState(false);
     const [selection, setSelection] = useState(null); // { text, page }
     const [noteText, setNoteText] = useState('');
+
+    // Metadata State
+    const [pdfMeta, setPdfMeta] = useState(null);
+    const [showInfo, setShowInfo] = useState(false);
+    const { isAdmin } = useAuth();
+
+    // Fetch PDF Metadata
+    useEffect(() => {
+        const fetchMeta = async () => {
+            try {
+                const { data } = await api.get(`/pdfs/${id}`);
+                setPdfMeta(data);
+            } catch (err) {
+                console.error('Failed to fetch PDF metadata', err);
+            }
+        };
+        if (id) fetchMeta();
+    }, [id]);
 
     // Session Management (Simplified for brevity)
     useEffect(() => {
@@ -293,6 +313,13 @@ const PDFReader = () => {
 
                         <div className="flex items-center gap-2">
                             <button
+                                className={`p-2 rounded-md transition-colors ${showInfo ? 'bg-brand-50 text-brand-600' : 'text-gray-500 hover:bg-gray-50 hover:text-brand-600'}`}
+                                onClick={() => setShowInfo(true)}
+                                title="Document Info"
+                            >
+                                <Info className="w-5 h-5" />
+                            </button>
+                            <button
                                 className={`p-2 rounded-md transition-colors ${showNotes ? 'bg-brand-50 text-brand-600' : 'text-gray-500 hover:bg-gray-50 hover:text-brand-600'}`}
                                 onClick={() => setShowNotes(!showNotes)}
                                 title="Notes"
@@ -445,6 +472,14 @@ const PDFReader = () => {
                     </div>
                 </div>
             )}
+
+            {/* Info Modal */}
+            <MetadataModal
+                pdf={pdfMeta}
+                isOpen={showInfo}
+                onClose={() => setShowInfo(false)}
+                onUpdate={(updatedPdf) => setPdfMeta(updatedPdf)}
+            />
         </div>
     );
 };

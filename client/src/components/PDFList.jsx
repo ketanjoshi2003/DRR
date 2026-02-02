@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api/axios';
-import { FileText, Clock, Trash2, Search } from 'lucide-react';
+import { FileText, Clock, Trash2, Search, Info } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import MetadataModal from './MetadataModal';
 
 const PDFList = () => {
     const [pdfs, setPdfs] = useState([]);
@@ -11,6 +12,8 @@ const PDFList = () => {
     const [selectedIds, setSelectedIds] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');
     const { user } = useAuth();
+    const [selectedPdfForInfo, setSelectedPdfForInfo] = useState(null);
+    const [showInfoModal, setShowInfoModal] = useState(false);
 
     const fetchPdfs = async () => {
         try {
@@ -153,6 +156,17 @@ const PDFList = () => {
                                 <div className="p-3 bg-brand-50 rounded-lg">
                                     <FileText className="w-8 h-8 text-brand-600" />
                                 </div>
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setSelectedPdfForInfo(pdf);
+                                        setShowInfoModal(true);
+                                    }}
+                                    className="p-2 text-gray-400 hover:text-brand-600 hover:bg-brand-50 rounded-full transition-all"
+                                    title="View Info"
+                                >
+                                    <Info className="w-5 h-5" />
+                                </button>
                             </div>
                             <h3 className="mt-4 text-lg font-bold text-gray-900 truncate" title={pdf.title}>
                                 {pdf.title}
@@ -218,6 +232,19 @@ const PDFList = () => {
                     No PDFs available. Ask an admin to upload some.
                 </div>
             )}
+
+            <MetadataModal
+                pdf={selectedPdfForInfo}
+                isOpen={showInfoModal}
+                onClose={() => {
+                    setShowInfoModal(false);
+                    setSelectedPdfForInfo(null);
+                }}
+                onUpdate={(updatedPdf) => {
+                    setPdfs(pdfs.map(p => p._id === updatedPdf._id ? updatedPdf : p));
+                    setSelectedPdfForInfo(updatedPdf);
+                }}
+            />
         </div>
     );
 };
