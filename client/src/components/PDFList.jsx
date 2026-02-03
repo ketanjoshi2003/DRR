@@ -1,16 +1,14 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api/axios';
-import { FileText, Clock, Trash2, Search, Info, Image as ImageIcon, Film, FileAudio, File, Download, Bookmark } from 'lucide-react';
+import { FileText, Clock, Trash2, Search, Download, Bookmark, Image as ImageIcon, Film, FileAudio, File } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const PDFList = () => {
-    // ... stats ...
     const getFileIcon = (type, name) => {
         let t = type;
         const ext = name?.toLowerCase() || '';
 
-        // If type is 'other' or missing, try extension check
         if (!t || t === 'other') {
             if (ext.endsWith('.pdf')) t = 'pdf';
             else if (ext.match(/\.(png|jpg|jpeg|gif|webp)$/)) t = 'image';
@@ -53,8 +51,6 @@ const PDFList = () => {
     const [selectedIds, setSelectedIds] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');
     const { user } = useAuth();
-    const [selectedPdfForInfo, setSelectedPdfForInfo] = useState(null);
-    const [showInfoModal, setShowInfoModal] = useState(false);
     const [userCollection, setUserCollection] = useState({ courses: [], subjects: [], pdfs: [] });
 
     const fetchUserCollection = async () => {
@@ -65,7 +61,6 @@ const PDFList = () => {
             console.error('Error fetching collection:', error);
         }
     };
-
 
     const fetchPdfs = async () => {
         try {
@@ -149,47 +144,47 @@ const PDFList = () => {
 
     return (
         <div>
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Digital Library</h1>
+            <div className="flex flex-col gap-4 mb-4">
+                <div className="flex items-center justify-between">
+                    <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 tracking-tight">Digital Library</h1>
+                </div>
 
-                <div className="flex flex-col md:flex-row gap-3 items-center w-full md:w-auto">
-                    <div className="relative w-full md:w-64">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <Search className="h-5 w-5 text-gray-400" />
+                <div className="flex flex-col md:flex-row gap-3 items-center w-full">
+                    <div className="relative w-full md:flex-1 max-w-md group">
+                        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                            <Search className="h-4 w-4 text-gray-400 group-focus-within:text-brand-500 transition-colors" />
                         </div>
                         <input
                             type="text"
-                            placeholder="Search PDFs..."
-                            className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-zinc-800 rounded-md leading-5 bg-white dark:bg-zinc-900 text-gray-900 dark:text-gray-100 placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-brand-500 focus:border-brand-500 sm:text-sm transition-colors"
+                            placeholder="Search materials..."
+                            className="block w-full pl-10 pr-4 py-2 border border-gray-200 dark:border-zinc-800 rounded-xl leading-5 bg-white dark:bg-zinc-950 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-4 focus:ring-brand-500/10 focus:border-brand-500 sm:text-sm transition-all shadow-sm"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                         />
                     </div>
 
-
-
                     {user?.role === 'admin' && (
-                        <div className="flex flex-wrap gap-3 items-center">
+                        <div className="flex flex-wrap gap-2 items-center w-full md:w-auto">
                             {!isDeleteMode ? (
                                 <button
                                     onClick={() => setIsDeleteMode(true)}
-                                    className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-sm"
+                                    className="px-4 py-2 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-all text-sm font-semibold shadow-lg shadow-red-500/20 flex items-center gap-2"
                                 >
                                     <Trash2 className="w-4 h-4" />
                                     Delete
                                 </button>
                             ) : (
-                                <div className="flex gap-2">
+                                <div className="flex flex-wrap gap-2 w-full md:w-auto">
                                     <button
                                         onClick={handleSelectAll}
-                                        className="px-3 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 text-sm"
+                                        className="px-4 py-2.5 bg-gray-100 dark:bg-zinc-900 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-200 dark:hover:bg-zinc-800 text-sm font-bold transition-all"
                                     >
-                                        {selectedIds.length === filteredPdfs.length ? 'Deselect All' : 'Select All'}
+                                        {selectedIds.length === filteredPdfs.length ? 'Deselect' : 'Select All'}
                                     </button>
                                     <button
                                         onClick={handleDeleteSelected}
                                         disabled={selectedIds.length === 0}
-                                        className="px-3 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 text-sm"
+                                        className="px-4 py-2.5 bg-red-600 text-white rounded-xl hover:bg-red-700 disabled:opacity-50 text-sm font-bold transition-all shadow-lg shadow-red-500/20"
                                     >
                                         Delete ({selectedIds.length})
                                     </button>
@@ -198,7 +193,7 @@ const PDFList = () => {
                                             setIsDeleteMode(false);
                                             setSelectedIds([]);
                                         }}
-                                        className="px-3 py-2 bg-white border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 text-sm"
+                                        className="px-4 py-2.5 bg-white dark:bg-zinc-950 border border-gray-200 dark:border-zinc-800 text-gray-600 dark:text-gray-400 rounded-xl hover:bg-gray-50 text-sm font-bold transition-all"
                                     >
                                         Cancel
                                     </button>
@@ -209,11 +204,11 @@ const PDFList = () => {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {filteredPdfs.map((pdf) => (
                     <div
                         key={pdf._id}
-                        className={`bg-white dark:bg-zinc-950 rounded-xl border p-6 transition-all duration-150 transform-gpu relative overflow-hidden flex flex-col h-full ${isDeleteMode
+                        className={`bg-white dark:bg-zinc-950 rounded-xl border p-5 transition-all duration-150 transform-gpu relative overflow-hidden flex flex-col h-full ${isDeleteMode
                             ? 'cursor-pointer hover:bg-red-50 dark:hover:bg-red-950/20 border-red-200 dark:border-red-900/50'
                             : 'border-gray-200 dark:border-zinc-800 hover:border-brand-300 dark:hover:border-brand-700 hover:shadow-lg dark:hover:shadow-brand-500/10 hover:-translate-y-1'
                             } ${selectedIds.includes(pdf._id) ? 'ring-2 ring-red-500 bg-red-50 dark:bg-red-950/20' : ''}`}
@@ -226,7 +221,7 @@ const PDFList = () => {
                                     checked={selectedIds.includes(pdf._id)}
                                     onChange={() => toggleSelection(pdf._id)}
                                     className="w-5 h-5 text-brand-600 rounded border-gray-300 focus:ring-brand-500 cursor-pointer"
-                                    onClick={(e) => e.stopPropagation()} // Prevent double toggle
+                                    onClick={(e) => e.stopPropagation()}
                                 />
                             </div>
                         )}
@@ -255,7 +250,6 @@ const PDFList = () => {
                                 {pdf.title}
                             </h3>
 
-                            {/* Metadata Display */}
                             <div className="mt-2 space-y-1">
                                 {pdf.metadata?.author && (
                                     <p className="text-sm text-gray-700 dark:text-gray-300 font-medium truncate">
@@ -270,27 +264,19 @@ const PDFList = () => {
                             </div>
 
                             <div className="mt-4 flex flex-wrap items-center gap-2">
-                                {/* File Info Badges */}
                                 <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 dark:bg-zinc-800 text-gray-800 dark:text-gray-200">
                                     {(pdf.size / 1024 / 1024).toFixed(1)} MB
                                 </span>
-
                                 {pdf.numPages > 0 && (
                                     <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 dark:bg-zinc-800 text-gray-800 dark:text-gray-200">
                                         {pdf.numPages} p
                                     </span>
                                 )}
-
-                                {/* Feature Badges */}
                                 {pdf.isSearchable && (
-                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400" title="Text is searchable">
+                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400">
                                         {pdf.ocrText ? 'OCR' : 'Text'}
                                     </span>
                                 )}
-
-
-
-
                             </div>
 
                             <div className="mt-2 flex items-center text-xs text-gray-400 dark:text-gray-500 gap-2">
@@ -376,7 +362,6 @@ const PDFList = () => {
                     No PDFs available. Ask an admin to upload some.
                 </div>
             )}
-
         </div>
     );
 };

@@ -105,9 +105,14 @@ const AdminDashboard = ({ tab = 'upload' }) => {
                     <BulkUpload />
                 </div>
             ) : (
-                <div>
+                <div className="pt-2">
+                    <div className="mb-6">
+                        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 tracking-tight">
+                            {tab === 'analytics' ? 'Analytics Dashboard' : 'Database Manager'}
+                        </h1>
+                    </div>
                     {/* Overview Stats */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                         <div
                             onClick={() => handleManageClick('users')}
                             className="bg-white dark:bg-zinc-900 p-6 rounded-xl border border-gray-200 dark:border-zinc-800 shadow-sm flex items-center justify-between cursor-pointer hover:shadow-md dark:hover:shadow-blue-500/10 transition-all group"
@@ -262,7 +267,7 @@ const AdminDashboard = ({ tab = 'upload' }) => {
                         </div>
                     )}
 
-                    <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center justify-between mb-3">
                         <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Reading Analytics</h2>
                         <button
                             onClick={handleResetAnalytics}
@@ -275,10 +280,10 @@ const AdminDashboard = ({ tab = 'upload' }) => {
                     {loadingStats ? (
                         <div>Loading stats...</div>
                     ) : (
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                             {/* Left Column: File Performance */}
                             <div>
-                                <div className="flex items-center justify-between h-8 mb-4">
+                                <div className="flex items-center justify-between mb-2">
                                     <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">
                                         File Performance {selectedUserEmail ? '(User Filtered)' : ''}
                                     </h3>
@@ -350,7 +355,7 @@ const AdminDashboard = ({ tab = 'upload' }) => {
 
                             {/* Right Column: User Activity */}
                             <div>
-                                <div className="flex items-center justify-between h-8 mb-4">
+                                <div className="flex items-center justify-between mb-2">
                                     <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">
                                         User Activity {selectedPdfId ? '(File Filtered)' : ''}
                                     </h3>

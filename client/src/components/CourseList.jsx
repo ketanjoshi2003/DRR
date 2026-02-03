@@ -164,25 +164,37 @@ const CourseList = () => {
 
     return (
         <div>
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Courses</h1>
+            <div className="flex flex-col gap-4 mb-4">
+                <div className="flex items-center justify-between">
+                    <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 tracking-tight">Courses</h1>
+                    <div className="md:hidden">
+                        {user?.role === 'admin' && !isDeleteMode && (
+                            <button
+                                onClick={() => setIsDeleteMode(true)}
+                                className="p-2 text-red-600 bg-red-50 dark:bg-red-950/20 rounded-lg"
+                            >
+                                <Trash2 className="w-5 h-5" />
+                            </button>
+                        )}
+                    </div>
+                </div>
 
-                <div className="flex flex-col md:flex-row gap-3 items-center w-full md:w-auto">
-                    <div className="relative w-full md:w-[200px]">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <Search className="h-5 w-5 text-gray-400" />
+                <div className="flex flex-col md:flex-row gap-3 items-center w-full">
+                    <div className="relative w-full md:flex-1 max-w-md group">
+                        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                            <Search className="h-4 w-4 text-gray-400 group-focus-within:text-brand-500 transition-colors" />
                         </div>
                         <input
                             type="text"
-                            placeholder="Search Courses..."
-                            className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-zinc-800 rounded-md leading-5 bg-white dark:bg-zinc-900 text-gray-900 dark:text-gray-100 placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-brand-500 focus:border-brand-500 sm:text-sm transition-colors"
+                            placeholder="Search courses..."
+                            className="block w-full pl-10 pr-4 py-2 border border-gray-200 dark:border-zinc-800 rounded-xl leading-5 bg-white dark:bg-zinc-950 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-4 focus:ring-brand-500/10 focus:border-brand-500 sm:text-sm transition-all shadow-sm"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                         />
                     </div>
 
                     {user?.role === 'admin' && (
-                        <div className="flex flex-wrap gap-3 items-center">
+                        <div className="flex flex-wrap gap-2 items-center w-full md:w-auto">
                             <input
                                 type="file"
                                 accept=".csv"
@@ -190,27 +202,43 @@ const CourseList = () => {
                                 onChange={handleFileUpload}
                                 className="hidden"
                             />
-
                             {!isDeleteMode ? (
-                                <button
-                                    onClick={() => setIsDeleteMode(true)}
-                                    className="flex items-center gap-2 px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
-                                >
-                                    <Trash2 className="w-4 h-4" />
-                                    Delete
-                                </button>
+                                <>
+                                    <button
+                                        onClick={() => fileInputRef.current?.click()}
+                                        disabled={uploading}
+                                        className="hidden md:flex items-center gap-2 px-3.5 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-all text-sm font-semibold shadow-lg shadow-green-500/10 disabled:opacity-50"
+                                    >
+                                        <Upload className="w-4 h-4" />
+                                        {uploading ? 'Processing...' : 'Upload CSV'}
+                                    </button>
+                                    <button
+                                        onClick={() => setShowAddModal(true)}
+                                        className="flex-1 md:flex-none flex items-center justify-center gap-2 px-3.5 py-2 bg-brand-600 text-white rounded-xl hover:bg-brand-700 transition-all text-sm font-semibold shadow-lg shadow-brand-500/20"
+                                    >
+                                        <Plus className="w-4 h-4" />
+                                        Add Course
+                                    </button>
+                                    <button
+                                        onClick={() => setIsDeleteMode(true)}
+                                        className="hidden md:flex items-center gap-2 px-3.5 py-2 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-all text-sm font-semibold shadow-lg shadow-red-500/20"
+                                    >
+                                        <Trash2 className="w-4 h-4" />
+                                        Delete
+                                    </button>
+                                </>
                             ) : (
-                                <div className="flex gap-2">
+                                <div className="flex flex-wrap gap-2 w-full md:w-auto">
                                     <button
                                         onClick={handleSelectAll}
-                                        className="px-3 py-1.5 bg-gray-200 dark:bg-zinc-800 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-zinc-700 text-sm font-medium transition-colors"
+                                        className="flex-1 md:flex-none px-4 py-2 bg-gray-100 dark:bg-zinc-900 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-200 dark:hover:bg-zinc-800 text-sm font-bold transition-all"
                                     >
-                                        {selectedIds.length === filteredCourses.length ? 'Deselect All' : 'Select All'}
+                                        {selectedIds.length === filteredCourses.length ? 'Deselect' : 'Select All'}
                                     </button>
                                     <button
                                         onClick={handleDeleteSelected}
                                         disabled={selectedIds.length === 0}
-                                        className="px-3 py-1.5 bg-red-600 dark:bg-red-700 text-white rounded-lg hover:bg-red-700 dark:hover:bg-red-600 disabled:opacity-50 text-sm font-medium transition-colors"
+                                        className="flex-1 md:flex-none px-4 py-2 bg-red-600 text-white rounded-xl hover:bg-red-700 disabled:opacity-50 text-sm font-bold transition-all shadow-lg shadow-red-500/20"
                                     >
                                         Delete ({selectedIds.length})
                                     </button>
@@ -219,28 +247,12 @@ const CourseList = () => {
                                             setIsDeleteMode(false);
                                             setSelectedIds([]);
                                         }}
-                                        className="px-3 py-1.5 bg-white dark:bg-zinc-900 border border-gray-300 dark:border-zinc-800 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-zinc-800 text-sm font-medium transition-colors"
+                                        className="px-4 py-2 bg-white dark:bg-zinc-950 border border-gray-200 dark:border-zinc-800 text-gray-600 dark:text-gray-400 rounded-xl hover:bg-gray-50 text-sm font-bold transition-all"
                                     >
                                         Cancel
                                     </button>
                                 </div>
                             )}
-                            <button
-                                onClick={() => fileInputRef.current?.click()}
-                                disabled={uploading || isDeleteMode}
-                                className={`flex items-center gap-2 px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 text-sm font-medium ${isDeleteMode ? 'opacity-50 pointer-events-none' : ''}`}
-                            >
-                                <Upload className="w-4 h-4" />
-                                {uploading ? 'Uploading...' : 'Upload CSV'}
-                            </button>
-                            <button
-                                onClick={() => setShowAddModal(true)}
-                                disabled={isDeleteMode}
-                                className={`flex items-center gap-2 px-3 py-1.5 bg-brand-600 text-white rounded-lg hover:bg-brand-700 transition-colors text-sm font-medium ${isDeleteMode ? 'opacity-50 pointer-events-none' : ''}`}
-                            >
-                                <Plus className="w-4 h-4" />
-                                Add Course
-                            </button>
                         </div>
                     )}
                 </div>
@@ -254,9 +266,9 @@ const CourseList = () => {
                         <div
                             key={course._id}
                             className={`bg-white dark:bg-zinc-950 rounded-xl border p-6 transition-all duration-150 transform-gpu flex flex-col h-full ${isDeleteMode
-                                ? 'cursor-pointer hover:bg-red-50 dark:hover:bg-red-950/20 border-red-200 dark:border-red-900/50'
+                                ? 'cursor-pointer hover:bg-red-50 dark:hover:bg-red-900/10 border-red-200 dark:border-red-900/50'
                                 : 'border-gray-200 dark:border-zinc-800 hover:border-brand-300 dark:hover:border-brand-700 hover:shadow-lg dark:hover:shadow-brand-500/10 hover:-translate-y-1'
-                                } ${selectedIds.includes(course._id) ? 'ring-2 ring-red-500 bg-red-50 dark:bg-red-950/20' : ''}`}
+                                } ${selectedIds.includes(course._id) ? 'ring-2 ring-red-500 bg-red-50 dark:bg-red-900/20' : ''}`}
                             onClick={() => isDeleteMode && toggleSelection(course._id)}
                         >
                             <div className="flex-1">
@@ -280,14 +292,13 @@ const CourseList = () => {
                                             </button>
                                         )}
                                         {isDeleteMode && (
-                                            <div className="flex items-center">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={selectedIds.includes(course._id)}
-                                                    onChange={() => toggleSelection(course._id)}
-                                                    className="w-5 h-5 text-brand-600 rounded border-gray-300 focus:ring-brand-500 cursor-pointer"
-                                                />
-                                            </div>
+                                            <input
+                                                type="checkbox"
+                                                checked={selectedIds.includes(course._id)}
+                                                onChange={() => toggleSelection(course._id)}
+                                                className="w-5 h-5 text-brand-600 rounded border-gray-300 focus:ring-brand-500 cursor-pointer"
+                                                onClick={(e) => e.stopPropagation()}
+                                            />
                                         )}
                                     </div>
                                 </div>
@@ -297,7 +308,6 @@ const CourseList = () => {
                                     {course.description || 'No description available.'}
                                 </p>
 
-                                {/* Semester Dropdown */}
                                 <div className="mt-4">
                                     <label className="text-xs text-gray-500 dark:text-gray-400 font-medium uppercase tracking-wide">Select Semester</label>
                                     <div className="relative mt-1">
@@ -340,54 +350,53 @@ const CourseList = () => {
                 </div>
             )}
 
-            {/* Add Course Modal */}
             {showAddModal && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                    <div className="bg-white rounded-lg p-6 w-full max-w-md">
-                        <h2 className="text-xl font-bold mb-4">Add New Course</h2>
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
+                    <div className="bg-white dark:bg-zinc-900 rounded-2xl border dark:border-zinc-800 shadow-2xl p-6 w-full max-w-md animate-in fade-in zoom-in duration-200">
+                        <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">Add New Course</h2>
                         <form onSubmit={handleAddCourse}>
                             <div className="space-y-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700">Course Name</label>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Course Name</label>
                                     <input
                                         type="text"
                                         required
                                         value={newCourse.name}
                                         onChange={(e) => setNewCourse({ ...newCourse, name: e.target.value })}
-                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 border p-2"
+                                        className="block w-full rounded-xl border-gray-200 dark:border-zinc-800 shadow-sm focus:border-brand-500 dark:focus:border-brand-500 focus:ring-brand-500 dark:focus:ring-brand-500 bg-white dark:bg-zinc-950 text-gray-900 dark:text-gray-100 border p-2.5 transition-all"
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700">Course Code</label>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Course Code</label>
                                     <input
                                         type="text"
                                         required
                                         value={newCourse.code}
                                         onChange={(e) => setNewCourse({ ...newCourse, code: e.target.value })}
-                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 border p-2"
+                                        className="block w-full rounded-xl border-gray-200 dark:border-zinc-800 shadow-sm focus:border-brand-500 dark:focus:border-brand-500 focus:ring-brand-500 dark:focus:ring-brand-500 bg-white dark:bg-zinc-950 text-gray-900 dark:text-gray-100 border p-2.5 transition-all"
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700">Description</label>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description</label>
                                     <textarea
                                         value={newCourse.description}
                                         onChange={(e) => setNewCourse({ ...newCourse, description: e.target.value })}
-                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 border p-2"
+                                        className="block w-full rounded-xl border-gray-200 dark:border-zinc-800 shadow-sm focus:border-brand-500 dark:focus:border-brand-500 focus:ring-brand-500 dark:focus:ring-brand-500 bg-white dark:bg-zinc-950 text-gray-900 dark:text-gray-100 border p-2.5 transition-all"
                                         rows="3"
                                     />
                                 </div>
                             </div>
-                            <div className="mt-6 flex justify-end gap-3">
+                            <div className="mt-8 flex justify-end gap-3">
                                 <button
                                     type="button"
                                     onClick={() => setShowAddModal(false)}
-                                    className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md"
+                                    className="px-4 py-2.5 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-xl transition-all font-medium"
                                 >
                                     Cancel
                                 </button>
                                 <button
                                     type="submit"
-                                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                                    className="px-6 py-2.5 bg-brand-600 text-white rounded-xl hover:bg-brand-700 shadow-lg shadow-brand-500/20 font-bold"
                                 >
                                     Add Course
                                 </button>

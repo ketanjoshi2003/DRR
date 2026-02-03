@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Book, Plus, Upload, Trash2, Filter, ChevronDown, Check, Search, Bookmark } from 'lucide-react';
+import { Book, Plus, Upload, Trash2, Filter, Search, Bookmark } from 'lucide-react';
 import CustomSelect from './CustomSelect';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
@@ -154,7 +154,6 @@ const SubjectList = () => {
         }
     };
 
-    // Filter subjects first
     const filteredSubjects = subjects.filter(s => {
         const sCourseId = s.course?._id || s.course;
         const sSemesterId = s.semester?._id || s.semester;
@@ -177,8 +176,6 @@ const SubjectList = () => {
         return true;
     });
 
-    // Group subjects by Semester
-    // { "Semester 1": [subjects...], "Semester 2": [subjects...] }
     const subjectsBySemester = filteredSubjects.reduce((acc, subject) => {
         const semName = subject.semester?.name || 'Unassigned Semester';
         if (!acc[semName]) {
@@ -188,8 +185,6 @@ const SubjectList = () => {
         return acc;
     }, {});
 
-    // Get sorted semester names for display order
-    // Order by name if possible, or keep as is.
     const sortedSemesterNames = Object.keys(subjectsBySemester).sort();
 
     const filteredSemesters = selectedCourse === 'all'
@@ -200,62 +195,63 @@ const SubjectList = () => {
     if (loading) return <div>Loading subjects...</div>;
 
     return (
-        <div>
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Subjects</h1>
+        <div className="space-y-4">
+            <div className="flex flex-col gap-4 mb-4">
+                <div className="flex items-center justify-between">
+                    <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 tracking-tight">Subjects</h1>
+                </div>
 
-                <div className="flex flex-col md:flex-row gap-3 items-center w-full md:w-auto">
-                    <div className="relative w-full md:w-[200px]">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <Search className="h-5 w-5 text-gray-400" />
+                <div className="flex flex-col md:flex-row gap-3 items-center w-full">
+                    <div className="relative w-full md:flex-1 max-w-md group">
+                        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                            <Search className="h-4 w-4 text-gray-400 group-focus-within:text-brand-500 transition-colors" />
                         </div>
                         <input
                             type="text"
-                            placeholder="Search Subjects..."
-                            className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-zinc-800 rounded-md leading-5 bg-white dark:bg-zinc-900 text-gray-900 dark:text-gray-100 placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-brand-500 focus:border-brand-500 sm:text-sm transition-colors"
+                            placeholder="Search subjects..."
+                            className="block w-full pl-10 pr-4 py-2 border border-gray-200 dark:border-zinc-800 rounded-xl leading-5 bg-white dark:bg-zinc-950 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-4 focus:ring-brand-500/10 focus:border-brand-500 sm:text-sm transition-all shadow-sm"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                         />
                     </div>
 
-                    <div className="flex flex-wrap gap-3 items-center w-full md:w-auto">
-                        {/* Course Filter */}
-                        <div className="w-full md:w-[200px]">
-                            <CustomSelect
-                                icon={Filter}
-                                value={selectedCourse}
-                                onChange={(newValue) => {
-                                    setSelectedCourse(newValue);
-                                    setSelectedSemester('all');
-                                }}
-                                options={[
-                                    { value: 'all', label: 'All Courses' },
-                                    ...courses.map(c => ({ value: c._id, label: `${c.name} (${c.code})` }))
-                                ]}
-                                placeholder="Filter by Course"
-                            />
-                        </div>
+                    <div className="flex flex-wrap gap-2 items-center w-full md:w-auto">
+                        <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
+                            <div className="w-full sm:w-[180px]">
+                                <CustomSelect
+                                    icon={Filter}
+                                    value={selectedCourse}
+                                    onChange={(newValue) => {
+                                        setSelectedCourse(newValue);
+                                        setSelectedSemester('all');
+                                    }}
+                                    options={[
+                                        { value: 'all', label: 'All Courses' },
+                                        ...courses.map(c => ({ value: c._id, label: `${c.name} (${c.code})` }))
+                                    ]}
+                                    placeholder="Filter Course"
+                                />
+                            </div>
 
-                        {/* Semester Filter */}
-                        <div className="w-full md:w-[200px]">
-                            <CustomSelect
-                                icon={Filter}
-                                value={selectedSemester}
-                                onChange={setSelectedSemester}
-                                options={[
-                                    { value: 'all', label: 'All Semesters' },
-                                    ...filteredSemesters.map(s => ({
-                                        value: s._id,
-                                        label: selectedCourse === 'all' ? `${s.name} (${s.course?.code || '?'})` : s.name
-                                    }))
-                                ]}
-                                placeholder="Filter by Semester"
-                            />
+                            <div className="w-full sm:w-[180px]">
+                                <CustomSelect
+                                    icon={Filter}
+                                    value={selectedSemester}
+                                    onChange={setSelectedSemester}
+                                    options={[
+                                        { value: 'all', label: 'All Semesters' },
+                                        ...filteredSemesters.map(s => ({
+                                            value: s._id,
+                                            label: selectedCourse === 'all' ? `${s.name} (${s.course?.code || '?'})` : s.name
+                                        }))
+                                    ]}
+                                    placeholder="Filter Semester"
+                                />
+                            </div>
                         </div>
 
                         {user?.role === 'admin' && (
-                            <>
-
+                            <div className="flex flex-wrap gap-2 items-center w-full md:w-auto">
                                 <input
                                     type="file"
                                     accept=".csv"
@@ -264,25 +260,42 @@ const SubjectList = () => {
                                     className="hidden"
                                 />
                                 {!isDeleteMode ? (
-                                    <button
-                                        onClick={() => setIsDeleteMode(true)}
-                                        className="flex items-center gap-2 px-4 py-2 bg-red-600 dark:bg-red-700 text-white rounded-md hover:bg-red-700 dark:hover:bg-red-600 transition-colors text-sm shadow-sm"
-                                    >
-                                        <Trash2 className="w-4 h-4" />
-                                        Delete
-                                    </button>
+                                    <>
+                                        <button
+                                            onClick={() => fileInputRef.current?.click()}
+                                            disabled={uploading}
+                                            className="hidden md:flex items-center gap-2 px-3.5 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-all text-sm font-semibold shadow-lg shadow-green-500/10 disabled:opacity-50"
+                                        >
+                                            <Upload className="w-4 h-4" />
+                                            {uploading ? 'Processing...' : 'Upload CSV'}
+                                        </button>
+                                        <button
+                                            onClick={() => setShowAddModal(true)}
+                                            className="flex-1 md:flex-none flex items-center justify-center gap-2 px-3.5 py-2 bg-brand-600 text-white rounded-xl hover:bg-brand-700 transition-all text-sm font-semibold shadow-lg shadow-brand-500/20"
+                                        >
+                                            <Plus className="w-4 h-4" />
+                                            Add Subject
+                                        </button>
+                                        <button
+                                            onClick={() => setIsDeleteMode(true)}
+                                            className="px-4 py-2 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-all text-sm font-semibold shadow-lg shadow-red-500/20 flex items-center gap-2"
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                            Delete
+                                        </button>
+                                    </>
                                 ) : (
-                                    <div className="flex gap-2">
+                                    <div className="flex flex-wrap gap-2 w-full md:w-auto">
                                         <button
                                             onClick={handleSelectAll}
-                                            className="px-3 py-2 bg-gray-200 dark:bg-zinc-800 text-gray-800 dark:text-gray-200 rounded-md hover:bg-gray-300 dark:hover:bg-zinc-700 text-sm transition-colors"
+                                            className="flex-1 md:flex-none px-4 py-2 bg-gray-100 dark:bg-zinc-900 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-200 dark:hover:bg-zinc-800 text-sm font-bold transition-all"
                                         >
-                                            {selectedIds.length === filteredSubjects.length ? 'Deselect All' : 'Select All'}
+                                            {selectedIds.length === filteredSubjects.length ? 'Deselect' : 'Select All'}
                                         </button>
                                         <button
                                             onClick={handleDeleteSelected}
                                             disabled={selectedIds.length === 0}
-                                            className="px-3 py-2 bg-red-600 dark:bg-red-700 text-white rounded-md hover:bg-red-700 dark:hover:bg-red-600 disabled:opacity-50 text-sm transition-colors"
+                                            className="flex-1 md:flex-none px-4 py-2 bg-red-600 text-white rounded-xl hover:bg-red-700 disabled:opacity-50 text-sm font-bold transition-all shadow-lg shadow-red-500/20"
                                         >
                                             Delete ({selectedIds.length})
                                         </button>
@@ -291,44 +304,27 @@ const SubjectList = () => {
                                                 setIsDeleteMode(false);
                                                 setSelectedIds([]);
                                             }}
-                                            className="px-3 py-2 bg-white dark:bg-zinc-900 border border-gray-300 dark:border-zinc-700 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-50 dark:hover:bg-zinc-800 text-sm transition-colors"
+                                            className="px-4 py-2 bg-white dark:bg-zinc-950 border border-gray-200 dark:border-zinc-800 text-gray-600 dark:text-gray-400 rounded-xl hover:bg-gray-50 text-sm font-bold transition-all"
                                         >
                                             Cancel
                                         </button>
                                     </div>
                                 )}
-                                <button
-                                    onClick={() => fileInputRef.current?.click()}
-                                    disabled={uploading || isDeleteMode}
-                                    className={`flex items-center gap-2 px-4 py-2 bg-green-600 dark:bg-green-700 text-white rounded-md hover:bg-green-700 dark:hover:bg-green-600 transition-colors disabled:opacity-50 text-sm shadow-sm ${isDeleteMode ? 'opacity-50 pointer-events-none' : ''}`}
-                                >
-                                    <Upload className="w-4 h-4" />
-                                    {uploading ? '...' : 'CSV'}
-                                </button>
-                                <button
-                                    onClick={() => setShowAddModal(true)}
-                                    disabled={isDeleteMode}
-                                    className={`flex items-center gap-2 px-4 py-2 bg-brand-600 dark:bg-brand-700 text-white rounded-lg hover:bg-brand-700 dark:hover:bg-brand-600 transition-colors text-sm font-medium shadow-sm dark:shadow-brand-500/10 ${isDeleteMode ? 'opacity-50 pointer-events-none' : ''}`}
-                                >
-                                    <Plus className="w-4 h-4" />
-                                    Add Subject
-                                </button>
-                            </>
+                            </div>
                         )}
                     </div>
                 </div>
             </div>
 
-            {/* Display grouped by Semester */}
             {sortedSemesterNames.length > 0 ? (
                 sortedSemesterNames.map(semName => (
                     <div key={semName} className="mb-8">
                         <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4 border-b dark:border-zinc-800 pb-2">{semName}</h2>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                             {subjectsBySemester[semName].map((subject) => (
                                 <div
                                     key={subject._id}
-                                    className={`bg-white dark:bg-zinc-900 rounded-xl border p-6 transition-all duration-150 transform-gpu relative overflow-hidden ${isDeleteMode
+                                    className={`bg-white dark:bg-zinc-900 rounded-xl border p-5 transition-all duration-150 transform-gpu relative overflow-hidden group ${isDeleteMode
                                         ? 'cursor-pointer hover:bg-red-50 dark:hover:bg-red-900/10 border-red-200 dark:border-red-900/50'
                                         : 'border-gray-200 dark:border-zinc-800 hover:border-brand-300 dark:hover:border-brand-700 hover:shadow-lg dark:hover:shadow-brand-500/10 hover:-translate-y-1'
                                         } ${selectedIds.includes(subject._id) ? 'ring-2 ring-red-500 bg-red-50 dark:bg-red-900/20' : ''}`}
@@ -363,14 +359,13 @@ const SubjectList = () => {
                                                     </button>
                                                 )}
                                                 {isDeleteMode && (
-                                                    <div className="flex items-center">
-                                                        <input
-                                                            type="checkbox"
-                                                            checked={selectedIds.includes(subject._id)}
-                                                            onChange={() => toggleSelection(subject._id)}
-                                                            className="w-5 h-5 text-brand-600 dark:text-brand-500 rounded border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 focus:ring-brand-500 cursor-pointer transition-colors"
-                                                        />
-                                                    </div>
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={selectedIds.includes(subject._id)}
+                                                        onChange={() => toggleSelection(subject._id)}
+                                                        className="w-5 h-5 text-brand-600 rounded border-gray-300 focus:ring-brand-500 cursor-pointer"
+                                                        onClick={(e) => e.stopPropagation()}
+                                                    />
                                                 )}
                                             </div>
                                         </div>
@@ -391,7 +386,6 @@ const SubjectList = () => {
                 </div>
             )}
 
-            {/* Add Subject Modal */}
             {showAddModal && (
                 <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
                     <div className="bg-white dark:bg-zinc-900 rounded-xl border dark:border-zinc-800 shadow-2xl p-6 w-full max-w-md animate-in fade-in zoom-in duration-200">
@@ -413,7 +407,7 @@ const SubjectList = () => {
                                     </select>
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Select Semester</label>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Select Semester</label>
                                     <select
                                         required
                                         value={newSubject.semesterId}

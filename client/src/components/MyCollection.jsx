@@ -82,25 +82,24 @@ const MyCollection = () => {
     ];
 
     return (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            <div className="flex items-center gap-4 mb-8">
-                <div className="p-3 bg-brand-50 dark:bg-brand-900/20 rounded-xl">
-                    <Bookmark className="w-8 h-8 text-brand-600 dark:text-brand-400" />
+        <div>
+            <div className="flex items-center gap-3 mb-6">
+                <div className="p-2 bg-brand-50 dark:bg-brand-900/20 rounded-lg">
+                    <Bookmark className="w-6 h-6 text-brand-600 dark:text-brand-400" />
                 </div>
                 <div>
-                    <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">My Collection</h1>
-                    <p className="text-gray-500 dark:text-gray-400 mt-1">Your saved courses, subjects, and reading materials.</p>
+                    <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 leading-tight">My Collection</h1>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Your saved courses, subjects, and reading materials.</p>
                 </div>
             </div>
 
-            {/* Tabs */}
-            <div className="flex flex-wrap gap-2 mb-8 border-b dark:border-zinc-800 pb-px">
+            <div className="flex flex-wrap gap-2 mb-6 border-b dark:border-zinc-800 pb-px">
                 {tabs.map(tab => (
                     <button
                         key={tab.id}
                         onClick={() => setActiveTab(tab.id)}
                         className={`
-                            flex items-center gap-2 px-6 py-3 text-sm font-semibold transition-all relative
+                            flex items-center gap-2 px-4 py-2 text-sm font-semibold transition-all relative
                             ${activeTab === tab.id
                                 ? 'text-brand-600 dark:text-brand-400'
                                 : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}
@@ -121,10 +120,9 @@ const MyCollection = () => {
                 ))}
             </div>
 
-            {/* Tab Content */}
             <div className="animate-fade-in">
                 {activeTab === 'pdfs' && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {collection.pdfs?.map(pdf => (
                             <div key={pdf._id} className="bg-white dark:bg-zinc-950 border border-gray-200 dark:border-zinc-800 rounded-xl p-5 hover:border-brand-500/50 transition-all duration-150 group">
                                 <div className="flex items-start justify-between mb-4">
@@ -157,7 +155,7 @@ const MyCollection = () => {
                 )}
 
                 {activeTab === 'subjects' && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {collection.subjects?.map(subject => (
                             <div key={subject._id} className="bg-white dark:bg-zinc-950 border border-gray-200 dark:border-zinc-800 rounded-xl p-5 hover:border-brand-500/50 transition-all duration-150 relative overflow-hidden group">
                                 <div className="absolute -right-4 -top-4 opacity-[0.03] group-hover:opacity-[0.05] transition-opacity">
@@ -192,7 +190,7 @@ const MyCollection = () => {
                 )}
 
                 {activeTab === 'courses' && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {collection.courses?.map(course => (
                             <div key={course._id} className="bg-white dark:bg-zinc-950 border border-gray-200 dark:border-zinc-800 rounded-xl p-6 hover:border-brand-500/50 transition-all duration-150 flex gap-5">
                                 <div className="p-4 bg-brand-50 dark:bg-brand-900/20 rounded-xl h-fit">

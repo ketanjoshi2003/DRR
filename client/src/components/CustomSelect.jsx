@@ -57,7 +57,7 @@ const CustomSelect = ({
                 type="button"
                 onClick={handleToggle}
                 className={`
-                    flex items-center gap-3 w-full bg-white dark:bg-zinc-950 border rounded-xl px-4 py-3.5 text-sm text-left transition-all duration-300 outline-none
+                    flex items-center gap-2.5 w-full bg-white dark:bg-zinc-950 border rounded-lg px-3 py-2 text-sm text-left transition-all duration-300 outline-none
                     ${isOpen
                         ? 'border-brand-500 ring-4 ring-brand-500/10 dark:ring-brand-500/20 shadow-lg'
                         : 'border-gray-300 dark:border-zinc-800 hover:border-brand-400 dark:hover:border-brand-600 hover:shadow-md'
@@ -65,14 +65,14 @@ const CustomSelect = ({
                 `}
             >
                 {Icon && (
-                    <div className={`p-1.5 rounded-lg transition-colors ${isOpen ? 'bg-brand-50 dark:bg-brand-900/20' : 'bg-gray-50 dark:bg-zinc-900'}`}>
-                        <Icon className={`w-4 h-4 ${isOpen ? 'text-brand-600 dark:text-brand-400' : 'text-gray-400 dark:text-zinc-500'}`} />
+                    <div className={`p-1 rounded-md transition-colors ${isOpen ? 'bg-brand-50 dark:bg-brand-900/20' : 'bg-gray-50 dark:bg-zinc-900'}`}>
+                        <Icon className={`w-3.5 h-3.5 ${isOpen ? 'text-brand-600 dark:text-brand-400' : 'text-gray-400 dark:text-zinc-500'}`} />
                     </div>
                 )}
                 <span className={`block truncate flex-1 font-semibold ${selectedOption ? 'text-gray-900 dark:text-gray-100' : 'text-gray-400 dark:text-zinc-500 font-medium'}`}>
                     {selectedOption ? selectedOption.label : placeholder}
                 </span>
-                <ChevronDown className={`w-4 h-4 text-gray-400 dark:text-zinc-600 transition-transform duration-300 ${isOpen ? 'rotate-180 text-brand-500' : ''}`} />
+                <ChevronDown className={`w-3.5 h-3.5 text-gray-400 dark:text-zinc-600 transition-transform duration-300 ${isOpen ? 'rotate-180 text-brand-500' : ''}`} />
             </button>
 
             {isOpen && (
@@ -120,7 +120,7 @@ const CustomSelect = ({
                                         setSearchTerm('');
                                     }}
                                     className={`
-                                        group cursor-pointer select-none relative py-3 pl-4 pr-10 text-sm transition-all duration-200
+                                        group cursor-pointer select-none relative py-2 pl-3.5 pr-10 text-sm transition-all duration-200
                                         ${option.value === value
                                             ? 'bg-brand-50 dark:bg-brand-900/30 text-brand-700 dark:text-brand-400'
                                             : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-zinc-800/80 hover:text-brand-600 dark:hover:text-brand-400'
