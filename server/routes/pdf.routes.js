@@ -167,6 +167,8 @@ router.post('/bulk-upload', protect, authorize('admin'), upload.array('files', 2
                     size: file.size,
                     type: fileType,
                     uploadedBy: req.user._id,
+                    courseCode: req.body.courseCode,
+                    subjectCode: req.body.subjectCode,
                     accessControl: req.body.accessControl ? JSON.parse(req.body.accessControl) : undefined,
                     metadata: {
                         ...(processedData?.metadata || {}),
@@ -417,7 +419,7 @@ router.delete('/:id', protect, authorize('admin'), async (req, res) => {
 // @access  Admin
 router.put('/:id', protect, authorize('admin'), async (req, res) => {
     try {
-        const { title, metadata, type, accessControl } = req.body;
+        const { title, metadata, type, numPages, courseCode, subjectCode, accessControl } = req.body;
         const pdf = await Pdf.findById(req.params.id);
 
         if (!pdf) {
@@ -426,6 +428,9 @@ router.put('/:id', protect, authorize('admin'), async (req, res) => {
 
         if (title) pdf.title = title;
         if (type) pdf.type = type;
+        if (numPages !== undefined) pdf.numPages = numPages;
+        if (courseCode !== undefined) pdf.courseCode = courseCode;
+        if (subjectCode !== undefined) pdf.subjectCode = subjectCode;
         if (accessControl) pdf.accessControl = accessControl;
         if (metadata) {
             pdf.metadata = {

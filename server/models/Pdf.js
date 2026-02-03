@@ -22,6 +22,8 @@ const PdfSchema = new mongoose.Schema({
         ref: 'User',
         required: true
     },
+    courseCode: String,
+    subjectCode: String,
     type: {
         type: String,
         enum: ['pdf', 'epub', 'doc', 'image', 'audio', 'video', 'other'],

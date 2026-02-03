@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Info, X, Edit2, Save, CheckCircle, FileText, User, Tag, Hash } from 'lucide-react';
+import { Info, X, Edit2, Save, CheckCircle, FileText, User, Tag, Hash, GraduationCap, Book, ChevronDown } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/axios';
+import CustomSelect from './CustomSelect';
 
 const MetadataModal = ({ pdf, isOpen, onClose, onUpdate }) => {
     const { isAdmin } = useAuth();
@@ -10,8 +11,37 @@ const MetadataModal = ({ pdf, isOpen, onClose, onUpdate }) => {
         title: '',
         author: '',
         subject: '',
-        keywords: ''
+        keywords: '',
+        numPages: 0,
+        courseCode: '',
+        subjectCode: ''
     });
+
+    const [courses, setCourses] = useState([]);
+    const [subjects, setSubjects] = useState([]);
+    const [loadingAssignments, setLoadingAssignments] = useState(false);
+
+    useEffect(() => {
+        if (isEditing) {
+            fetchAssignmentOptions();
+        }
+    }, [isEditing]);
+
+    const fetchAssignmentOptions = async () => {
+        try {
+            setLoadingAssignments(true);
+            const [coursesRes, subjectsRes] = await Promise.all([
+                api.get('/courses'),
+                api.get('/subjects')
+            ]);
+            setCourses(coursesRes.data);
+            setSubjects(subjectsRes.data);
+        } catch (err) {
+            console.error('Failed to fetch assignment options', err);
+        } finally {
+            setLoadingAssignments(false);
+        }
+    };
 
     useEffect(() => {
         if (pdf) {
@@ -19,7 +49,10 @@ const MetadataModal = ({ pdf, isOpen, onClose, onUpdate }) => {
                 title: pdf.title || '',
                 author: pdf.metadata?.author || '',
                 subject: pdf.metadata?.subject || '',
-                keywords: pdf.metadata?.keywords || ''
+                keywords: pdf.metadata?.keywords || '',
+                numPages: pdf.numPages || 0,
+                courseCode: pdf.courseCode || '',
+                subjectCode: pdf.subjectCode || ''
             });
         }
     }, [pdf, isOpen]);
@@ -28,6 +61,9 @@ const MetadataModal = ({ pdf, isOpen, onClose, onUpdate }) => {
         try {
             const { data } = await api.put(`/pdfs/${pdf._id}`, {
                 title: editForm.title,
+                numPages: parseInt(editForm.numPages),
+                courseCode: editForm.courseCode,
+                subjectCode: editForm.subjectCode,
                 metadata: {
                     author: editForm.author,
                     subject: editForm.subject,
@@ -86,12 +122,12 @@ const MetadataModal = ({ pdf, isOpen, onClose, onUpdate }) => {
                             <div className="space-y-1">
                                 <label className="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1">Title</label>
                                 <div className="relative">
-                                    <FileText className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300" />
+                                    <FileText className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-500 dark:text-brand-400 opacity-70" />
                                     <input
                                         type="text"
                                         value={editForm.title}
                                         onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
-                                        className="w-full pl-10 pr-4 py-2 bg-gray-50 dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-xl focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none transition-all dark:text-gray-100 font-medium"
+                                        className="w-full pl-10 pr-4 py-3 bg-white dark:bg-zinc-950 border border-gray-300 dark:border-zinc-700 rounded-xl focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none transition-all dark:text-gray-100 text-gray-900 font-semibold shadow-sm placeholder:text-gray-400"
                                         placeholder="Title"
                                     />
                                 </div>
@@ -101,12 +137,12 @@ const MetadataModal = ({ pdf, isOpen, onClose, onUpdate }) => {
                                 <div className="space-y-1">
                                     <label className="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1">Author</label>
                                     <div className="relative">
-                                        <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300" />
+                                        <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-500 dark:text-brand-400 opacity-70" />
                                         <input
                                             type="text"
                                             value={editForm.author}
                                             onChange={(e) => setEditForm({ ...editForm, author: e.target.value })}
-                                            className="w-full pl-10 pr-4 py-2 bg-gray-50 dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-xl focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none transition-all dark:text-gray-100 font-medium"
+                                            className="w-full pl-10 pr-4 py-3 bg-white dark:bg-zinc-950 border border-gray-300 dark:border-zinc-700 rounded-xl focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none transition-all dark:text-gray-100 text-gray-900 font-semibold shadow-sm placeholder:text-gray-400"
                                             placeholder="Author"
                                         />
                                     </div>
@@ -114,12 +150,12 @@ const MetadataModal = ({ pdf, isOpen, onClose, onUpdate }) => {
                                 <div className="space-y-1">
                                     <label className="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1">Subject</label>
                                     <div className="relative">
-                                        <Tag className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300" />
+                                        <Tag className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-500 dark:text-brand-400 opacity-70" />
                                         <input
                                             type="text"
                                             value={editForm.subject}
                                             onChange={(e) => setEditForm({ ...editForm, subject: e.target.value })}
-                                            className="w-full pl-10 pr-4 py-2 bg-gray-50 dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-xl focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none transition-all dark:text-gray-100 font-medium"
+                                            className="w-full pl-10 pr-4 py-3 bg-white dark:bg-zinc-950 border border-gray-300 dark:border-zinc-700 rounded-xl focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none transition-all dark:text-gray-100 text-gray-900 font-semibold shadow-sm placeholder:text-gray-400"
                                             placeholder="Subject"
                                         />
                                     </div>
@@ -129,14 +165,61 @@ const MetadataModal = ({ pdf, isOpen, onClose, onUpdate }) => {
                             <div className="space-y-1">
                                 <label className="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1">Keywords</label>
                                 <div className="relative">
-                                    <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300" />
+                                    <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-500 dark:text-brand-400 opacity-70" />
                                     <input
                                         type="text"
                                         value={editForm.keywords}
                                         onChange={(e) => setEditForm({ ...editForm, keywords: e.target.value })}
-                                        className="w-full pl-10 pr-4 py-2 bg-gray-50 dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-xl focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none transition-all dark:text-gray-100 font-medium"
+                                        className="w-full pl-10 pr-4 py-3 bg-white dark:bg-zinc-950 border border-gray-300 dark:border-zinc-700 rounded-xl focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none transition-all dark:text-gray-100 text-gray-900 font-semibold shadow-sm placeholder:text-gray-400"
                                         placeholder="Keywords (comma separated)"
                                     />
+                                </div>
+                            </div>
+
+                            <div className="space-y-1">
+                                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1">Number of Pages</label>
+                                <div className="relative">
+                                    <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-500 dark:text-brand-400 opacity-70" />
+                                    <input
+                                        type="number"
+                                        value={editForm.numPages}
+                                        onChange={(e) => setEditForm({ ...editForm, numPages: e.target.value })}
+                                        className="w-full pl-10 pr-4 py-3 bg-white dark:bg-zinc-950 border border-gray-300 dark:border-zinc-700 rounded-xl focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none transition-all dark:text-gray-100 text-gray-900 font-semibold shadow-sm placeholder:text-gray-400"
+                                        placeholder="Total Pages"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="pt-4 space-y-6">
+                                <div className="flex items-center gap-2 pb-2 border-b border-gray-100 dark:border-zinc-900">
+                                    <GraduationCap className="w-4 h-4 text-brand-500" />
+                                    <h3 className="text-[10px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-[0.2em]">Document Assignment</h3>
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider ml-1">Assign Course</label>
+                                        <CustomSelect
+                                            options={[{ value: '', label: 'No Course Assigned' }, ...courses.map(c => ({ value: c.code, label: `${c.name} (${c.code})` }))]}
+                                            value={editForm.courseCode}
+                                            onChange={(val) => setEditForm({ ...editForm, courseCode: val, subjectCode: '' })}
+                                            icon={GraduationCap}
+                                            placeholder="Search Course..."
+                                        />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider ml-1">Assign Subject</label>
+                                        <CustomSelect
+                                            options={[{ value: '', label: 'No Subject Assigned' }, ...subjects
+                                                .filter(s => !editForm.courseCode || s.courseCode === editForm.courseCode)
+                                                .map(s => ({ value: s.code, label: `${s.name} (${s.code})` }))
+                                            ]}
+                                            value={editForm.subjectCode}
+                                            onChange={(val) => setEditForm({ ...editForm, subjectCode: val })}
+                                            icon={Book}
+                                            placeholder="Search Subject..."
+                                        />
+                                    </div>
                                 </div>
                             </div>
 
@@ -215,6 +298,17 @@ const MetadataModal = ({ pdf, isOpen, onClose, onUpdate }) => {
                                     </div>
                                 </div>
                             )}
+
+                            <div className="pt-6 border-t border-gray-100 dark:border-zinc-900 grid grid-cols-2 gap-6">
+                                <div>
+                                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1">Course Assignment</span>
+                                    <p className="font-bold text-gray-700 dark:text-gray-300">{pdf.courseCode || 'Unassigned'}</p>
+                                </div>
+                                <div className="text-right">
+                                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1">Subject Assignment</span>
+                                    <p className="font-bold text-gray-700 dark:text-gray-300">{pdf.subjectCode || 'Unassigned'}</p>
+                                </div>
+                            </div>
                         </div>
                     )}
                 </div>
