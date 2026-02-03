@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Book, Plus, Upload, Trash2, Filter, ChevronDown, Check, Search } from 'lucide-react';
+import { Book, Plus, Upload, Trash2, Filter, ChevronDown, Check, Search, Bookmark } from 'lucide-react';
 import CustomSelect from './CustomSelect';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
@@ -20,6 +20,16 @@ const SubjectList = () => {
     const [isDeleteMode, setIsDeleteMode] = useState(false);
     const [selectedIds, setSelectedIds] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');
+    const [userCollection, setUserCollection] = useState({ courses: [], subjects: [], pdfs: [] });
+
+    const fetchUserCollection = async () => {
+        try {
+            const { data } = await api.get('/collection');
+            setUserCollection(data);
+        } catch (error) {
+            console.error('Error fetching collection:', error);
+        }
+    };
     const location = useLocation();
 
     useEffect(() => {
@@ -36,7 +46,22 @@ const SubjectList = () => {
 
     useEffect(() => {
         fetchData();
+        fetchUserCollection();
     }, []);
+
+    const toggleCollectionItem = async (type, id) => {
+        const isCollected = userCollection[type]?.some(item => (item._id || item) === id);
+        try {
+            if (isCollected) {
+                await api.post('/collection/remove', { type, id });
+            } else {
+                await api.post('/collection/add', { type, id });
+            }
+            fetchUserCollection();
+        } catch (error) {
+            console.error('Error toggling collection:', error);
+        }
+    };
 
     const fetchData = async () => {
         try {
@@ -307,16 +332,32 @@ const SubjectList = () => {
                                                     {subject.code}
                                                 </span>
                                             </div>
-                                            {isDeleteMode && (
-                                                <div className="flex items-center">
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={selectedIds.includes(subject._id)}
-                                                        onChange={() => toggleSelection(subject._id)}
-                                                        className="w-5 h-5 text-brand-600 dark:text-brand-500 rounded border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 focus:ring-brand-500 cursor-pointer transition-colors"
-                                                    />
-                                                </div>
-                                            )}
+                                            <div className="flex items-center gap-2">
+                                                {!isDeleteMode && (
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            toggleCollectionItem('subjects', subject._id);
+                                                        }}
+                                                        className={`p-2 rounded-full transition-all ${userCollection.subjects?.some(s => (s._id || s) === subject._id)
+                                                            ? 'text-brand-600 bg-brand-50 dark:bg-brand-900/40'
+                                                            : 'text-gray-400 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-900/20'
+                                                            }`}
+                                                    >
+                                                        <Bookmark className={`w-5 h-5 ${userCollection.subjects?.some(s => (s._id || s) === subject._id) ? 'fill-current' : ''}`} />
+                                                    </button>
+                                                )}
+                                                {isDeleteMode && (
+                                                    <div className="flex items-center">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={selectedIds.includes(subject._id)}
+                                                            onChange={() => toggleSelection(subject._id)}
+                                                            className="w-5 h-5 text-brand-600 dark:text-brand-500 rounded border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 focus:ring-brand-500 cursor-pointer transition-colors"
+                                                        />
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
                                         <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-1">{subject.name}</h3>
                                         <p className="text-gray-600 dark:text-gray-400 text-sm line-clamp-3">

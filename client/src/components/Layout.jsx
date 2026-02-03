@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { BookOpen, LogOut, Upload, BarChart, Book, GraduationCap, Calendar, LayoutGrid, Menu, X, Moon, Sun } from 'lucide-react';
+import { BookOpen, LogOut, Upload, BarChart, Book, GraduationCap, Calendar, LayoutGrid, Menu, X, Moon, Sun, Bookmark } from 'lucide-react';
 
 const Layout = () => {
     const { user, logout, isDarkMode, toggleTheme } = useAuth();
@@ -25,7 +25,8 @@ const Layout = () => {
     const navItems = [
         { to: "/", icon: LayoutGrid, label: "Library" },
         { to: "/courses", icon: GraduationCap, label: "Courses" },
-        { to: "/subjects", icon: Book, label: "Subjects" }
+        { to: "/subjects", icon: Book, label: "Subjects" },
+        { to: "/collection", icon: Bookmark, label: "My Collection" }
     ];
 
     const adminItems = [

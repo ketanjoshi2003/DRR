@@ -27,13 +27,18 @@ const UserSchema = new mongoose.Schema({
         type: String,
         enum: ['admin', 'librarian', 'reader', 'guest'],
         default: 'reader'
+    },
+    collection: {
+        courses: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Course' }],
+        subjects: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Subject' }],
+        pdfs: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Pdf' }]
     }
 }, { timestamps: true });
 
 // Encrypt password using bcrypt before saving
 UserSchema.pre('save', async function (next) {
     if (!this.isModified('password')) {
-        next();
+        return next();
     }
     const salt = await bcrypt.genSalt(10);
     this.password = await bcrypt.hash(this.password, salt);

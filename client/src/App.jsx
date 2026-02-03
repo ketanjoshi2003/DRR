@@ -12,6 +12,7 @@ import SubjectList from './components/SubjectList';
 import SemesterList from './components/SemesterList';
 import ImageViewer from './components/ImageViewer';
 import DocViewer from './components/DocViewer';
+import MyCollection from './components/MyCollection';
 
 const PrivateRoute = ({ children, adminOnly = false }) => {
   const { user, loading } = useAuth();
@@ -54,6 +55,11 @@ function AppRoutes() {
         <Route path="/semesters" element={
           <PrivateRoute adminOnly>
             <SemesterList />
+          </PrivateRoute>
+        } />
+        <Route path="/collection" element={
+          <PrivateRoute>
+            <MyCollection />
           </PrivateRoute>
         } />
         <Route path="/read/:id" element={

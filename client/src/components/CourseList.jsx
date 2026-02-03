@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Book, Upload, Trash2, Search } from 'lucide-react';
+import { Plus, Book, Upload, Trash2, Search, Bookmark } from 'lucide-react';
 import CustomSelect from './CustomSelect';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
@@ -20,10 +20,35 @@ const CourseList = () => {
     const [isDeleteMode, setIsDeleteMode] = useState(false);
     const [selectedIds, setSelectedIds] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');
+    const [userCollection, setUserCollection] = useState({ courses: [], subjects: [], pdfs: [] });
+
+    const fetchUserCollection = async () => {
+        try {
+            const { data } = await api.get('/collection');
+            setUserCollection(data);
+        } catch (error) {
+            console.error('Error fetching collection:', error);
+        }
+    };
 
     useEffect(() => {
         fetchData();
+        fetchUserCollection();
     }, []);
+
+    const toggleCollectionItem = async (type, id) => {
+        const isCollected = userCollection[type]?.some(item => (item._id || item) === id);
+        try {
+            if (isCollected) {
+                await api.post('/collection/remove', { type, id });
+            } else {
+                await api.post('/collection/add', { type, id });
+            }
+            fetchUserCollection();
+        } catch (error) {
+            console.error('Error toggling collection:', error);
+        }
+    };
 
     const fetchData = async () => {
         try {
@@ -239,16 +264,32 @@ const CourseList = () => {
                                     <div className="p-3 bg-brand-50 dark:bg-brand-900/40 rounded-lg">
                                         <Book className="w-8 h-8 text-brand-600 dark:text-brand-400" />
                                     </div>
-                                    {isDeleteMode && (
-                                        <div className="flex items-center">
-                                            <input
-                                                type="checkbox"
-                                                checked={selectedIds.includes(course._id)}
-                                                onChange={() => toggleSelection(course._id)}
-                                                className="w-5 h-5 text-brand-600 rounded border-gray-300 focus:ring-brand-500 cursor-pointer"
-                                            />
-                                        </div>
-                                    )}
+                                    <div className="flex items-center gap-2">
+                                        {!isDeleteMode && (
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    toggleCollectionItem('courses', course._id);
+                                                }}
+                                                className={`p-2 rounded-full transition-all ${userCollection.courses?.some(c => (c._id || c) === course._id)
+                                                    ? 'text-brand-600 bg-brand-50 dark:bg-brand-900/40'
+                                                    : 'text-gray-400 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-900/20'
+                                                    }`}
+                                            >
+                                                <Bookmark className={`w-5 h-5 ${userCollection.courses?.some(c => (c._id || c) === course._id) ? 'fill-current' : ''}`} />
+                                            </button>
+                                        )}
+                                        {isDeleteMode && (
+                                            <div className="flex items-center">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedIds.includes(course._id)}
+                                                    onChange={() => toggleSelection(course._id)}
+                                                    className="w-5 h-5 text-brand-600 rounded border-gray-300 focus:ring-brand-500 cursor-pointer"
+                                                />
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                                 <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">{course.name}</h3>
                                 <p className="text-sm text-gray-500 dark:text-gray-400 font-mono mt-1">{course.code}</p>

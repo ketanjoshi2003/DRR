@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api/axios';
-import { FileText, Clock, Trash2, Search, Info, Image as ImageIcon, Film, FileAudio, File, Download } from 'lucide-react';
+import { FileText, Clock, Trash2, Search, Info, Image as ImageIcon, Film, FileAudio, File, Download, Bookmark } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const PDFList = () => {
@@ -55,6 +55,16 @@ const PDFList = () => {
     const { user } = useAuth();
     const [selectedPdfForInfo, setSelectedPdfForInfo] = useState(null);
     const [showInfoModal, setShowInfoModal] = useState(false);
+    const [userCollection, setUserCollection] = useState({ courses: [], subjects: [], pdfs: [] });
+
+    const fetchUserCollection = async () => {
+        try {
+            const { data } = await api.get('/collection');
+            setUserCollection(data);
+        } catch (error) {
+            console.error('Error fetching collection:', error);
+        }
+    };
 
 
     const fetchPdfs = async () => {
@@ -70,7 +80,22 @@ const PDFList = () => {
 
     useEffect(() => {
         fetchPdfs();
+        fetchUserCollection();
     }, []);
+
+    const toggleCollectionItem = async (type, id) => {
+        const isCollected = userCollection[type]?.some(item => (item._id || item) === id);
+        try {
+            if (isCollected) {
+                await api.post('/collection/remove', { type, id });
+            } else {
+                await api.post('/collection/add', { type, id });
+            }
+            fetchUserCollection();
+        } catch (error) {
+            console.error('Error toggling collection:', error);
+        }
+    };
 
     const handleDeleteSelected = async () => {
         if (selectedIds.length === 0) return;
@@ -211,6 +236,20 @@ const PDFList = () => {
                                 <div className={`p-3 rounded-lg ${getIconBg(pdf.type, pdf.originalName)}`}>
                                     {getFileIcon(pdf.type, pdf.originalName)}
                                 </div>
+                                {!isDeleteMode && (
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            toggleCollectionItem('pdfs', pdf._id);
+                                        }}
+                                        className={`p-2 rounded-full transition-all ${userCollection.pdfs?.some(p => (p._id || p) === pdf._id)
+                                            ? 'text-brand-600 bg-brand-50 dark:bg-brand-900/40'
+                                            : 'text-gray-400 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-900/20'
+                                            }`}
+                                    >
+                                        <Bookmark className={`w-5 h-5 ${userCollection.pdfs?.some(p => (p._id || p) === pdf._id) ? 'fill-current' : ''}`} />
+                                    </button>
+                                )}
                             </div>
                             <h3 className="mt-4 text-lg font-bold text-gray-900 dark:text-gray-100 truncate" title={pdf.title}>
                                 {pdf.title}
