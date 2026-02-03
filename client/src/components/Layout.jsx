@@ -26,11 +26,11 @@ const Layout = () => {
         { to: "/", icon: LayoutGrid, label: "Library" },
         { to: "/courses", icon: GraduationCap, label: "Courses" },
         { to: "/subjects", icon: Book, label: "Subjects" },
+        ...(user?.role === 'admin' ? [{ to: "/semesters", icon: Calendar, label: "Semesters" }] : []),
         { to: "/collection", icon: Bookmark, label: "My Collection" }
     ];
 
     const adminItems = [
-        { to: "/semesters", icon: Calendar, label: "Semesters" },
         { to: "/upload", icon: Upload, label: "Upload" },
         { to: "/analytics", icon: BarChart, label: "Analytics" }
     ];

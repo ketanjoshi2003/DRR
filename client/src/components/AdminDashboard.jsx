@@ -11,6 +11,7 @@ const AdminDashboard = ({ tab = 'upload' }) => {
     const [userStats, setUserStats] = useState([]);
     const [loadingStats, setLoadingStats] = useState(false);
     const [selectedPdfId, setSelectedPdfId] = useState(null);
+    const [selectedUserEmail, setSelectedUserEmail] = useState(null);
     const [fileSearch, setFileSearch] = useState('');
     const [userSearch, setUserSearch] = useState('');
     const [overviewStats, setOverviewStats] = useState({ users: 0, courses: 0, subjects: 0, pdfs: 0 });
@@ -274,10 +275,21 @@ const AdminDashboard = ({ tab = 'upload' }) => {
                     {loadingStats ? (
                         <div>Loading stats...</div>
                     ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                            {/* Left Column: File Performance */}
                             <div>
                                 <div className="flex items-center justify-between h-8 mb-4">
-                                    <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">File Performance</h3>
+                                    <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">
+                                        File Performance {selectedUserEmail ? '(User Filtered)' : ''}
+                                    </h3>
+                                    {selectedUserEmail && (
+                                        <button
+                                            onClick={() => setSelectedUserEmail(null)}
+                                            className="text-xs text-brand-600 dark:text-brand-400 hover:text-brand-800 dark:hover:text-brand-300 font-normal"
+                                        >
+                                            Clear User Filter
+                                        </button>
+                                    )}
                                 </div>
                                 <div className="mb-4 relative">
                                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -292,19 +304,27 @@ const AdminDashboard = ({ tab = 'upload' }) => {
                                     />
                                 </div>
 
-                                <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">Click a title to filter user activity</p>
+                                <p className="text-[10px] text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-tight">Click a file to see who read it</p>
                                 <div className="overflow-x-auto bg-white dark:bg-zinc-900 rounded-lg border border-gray-200 dark:border-zinc-800">
                                     <table className="min-w-full divide-y divide-gray-200 dark:divide-zinc-800">
                                         <thead className="bg-gray-50 dark:bg-zinc-950">
                                             <tr>
                                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">PDF Title</th>
                                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Sessions</th>
-                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Readers</th>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Time</th>
                                             </tr>
                                         </thead>
                                         <tbody className="bg-white dark:bg-zinc-900 divide-y divide-gray-200 dark:divide-zinc-800">
                                             {stats
-                                                .filter(stat => stat.title.toLowerCase().includes(fileSearch.toLowerCase()))
+                                                .filter(stat => {
+                                                    // Filter by file search
+                                                    if (!stat.title.toLowerCase().includes(fileSearch.toLowerCase())) return false;
+                                                    // Filter by selected user if active
+                                                    if (selectedUserEmail) {
+                                                        return userStats.some(us => us.pdfId === stat._id && us.userEmail === selectedUserEmail);
+                                                    }
+                                                    return true;
+                                                })
                                                 .map((stat) => (
                                                     <tr
                                                         key={stat._id}
@@ -315,7 +335,7 @@ const AdminDashboard = ({ tab = 'upload' }) => {
                                                             {stat.title}
                                                         </td>
                                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{stat.totalSessions}</td>
-                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{stat.uniqueUsersCount}</td>
+                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{(stat.totalDuration / 60).toFixed(1)}m</td>
                                                     </tr>
                                                 ))}
                                             {stats.length === 0 && (
@@ -328,17 +348,18 @@ const AdminDashboard = ({ tab = 'upload' }) => {
                                 </div>
                             </div>
 
+                            {/* Right Column: User Activity */}
                             <div>
-                                <div className="flex items-center h-8 mb-4">
-                                    <h3 className="text-lg font-semibold text-gray-700">
-                                        User Activity {selectedPdfId ? '(Filtered)' : '(All)'}
+                                <div className="flex items-center justify-between h-8 mb-4">
+                                    <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">
+                                        User Activity {selectedPdfId ? '(File Filtered)' : ''}
                                     </h3>
                                     {selectedPdfId && (
                                         <button
                                             onClick={() => setSelectedPdfId(null)}
-                                            className="ml-2 text-xs text-brand-600 dark:text-brand-400 hover:text-brand-800 dark:hover:text-brand-300 font-normal"
+                                            className="text-xs text-brand-600 dark:text-brand-400 hover:text-brand-800 dark:hover:text-brand-300 font-normal"
                                         >
-                                            Clear Filter
+                                            Clear File Filter
                                         </button>
                                     )}
                                 </div>
@@ -355,6 +376,7 @@ const AdminDashboard = ({ tab = 'upload' }) => {
                                         onChange={(e) => setUserSearch(e.target.value)}
                                     />
                                 </div>
+                                <p className="text-[10px] text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-tight">Click a user to see what they read</p>
                                 <div className="overflow-x-auto bg-white dark:bg-zinc-900 rounded-lg border border-gray-200 dark:border-zinc-800">
                                     <table className="min-w-full divide-y divide-gray-200 dark:divide-zinc-800">
                                         <thead className="bg-gray-50 dark:bg-zinc-950">
@@ -362,33 +384,38 @@ const AdminDashboard = ({ tab = 'upload' }) => {
                                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">User</th>
                                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">File</th>
                                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Time</th>
-                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Opens</th>
                                             </tr>
                                         </thead>
                                         <tbody className="bg-white dark:bg-zinc-900 divide-y divide-gray-200 dark:divide-zinc-800">
                                             {userStats
                                                 .filter(stat => !selectedPdfId || stat.pdfId === selectedPdfId)
+                                                .filter(stat => !selectedUserEmail || stat.userEmail === selectedUserEmail)
                                                 .filter(stat =>
                                                     stat.userName.toLowerCase().includes(userSearch.toLowerCase()) ||
                                                     stat.userEmail.toLowerCase().includes(userSearch.toLowerCase()) ||
                                                     stat.pdfTitle.toLowerCase().includes(userSearch.toLowerCase())
                                                 )
                                                 .map((stat, idx) => (
-                                                    <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-zinc-950 transition-colors">
+                                                    <tr
+                                                        key={idx}
+                                                        className={`hover:bg-gray-50 dark:hover:bg-zinc-950 transition-colors cursor-pointer ${selectedUserEmail === stat.userEmail ? 'bg-brand-50 dark:bg-brand-900/20' : ''}`}
+                                                        onClick={() => setSelectedUserEmail(selectedUserEmail === stat.userEmail ? null : stat.userEmail)}
+                                                    >
                                                         <td className="px-6 py-4 text-sm font-medium text-gray-900 dark:text-gray-100 break-words max-w-[150px]">
-                                                            {stat.userName}
-                                                            <div className="text-xs text-gray-400 dark:text-gray-500 break-words">{stat.userEmail}</div>
+                                                            <div className={selectedUserEmail === stat.userEmail ? 'text-brand-700 dark:text-brand-400' : ''}>
+                                                                {stat.userName}
+                                                            </div>
+                                                            <div className="text-xs text-gray-400 dark:text-gray-500 break-words font-normal">{stat.userEmail}</div>
                                                         </td>
                                                         <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 break-words max-w-[150px]">{stat.pdfTitle}</td>
                                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                                                             {(stat.totalDuration / 60).toFixed(1)}m
                                                         </td>
-                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{stat.totalSessions}</td>
                                                     </tr>
                                                 ))}
                                             {userStats.length === 0 && (
                                                 <tr>
-                                                    <td colSpan="4" className="px-6 py-4 text-center text-gray-500">No activity recorded</td>
+                                                    <td colSpan="3" className="px-6 py-4 text-center text-gray-500">No activity recorded</td>
                                                 </tr>
                                             )}
                                         </tbody>

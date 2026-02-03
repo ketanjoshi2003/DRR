@@ -92,6 +92,12 @@ const PDFReader = () => {
     const containerRef = useRef(null);
 
     const [blobUrl, setBlobUrl] = useState(null);
+    const currentPageRef = useRef(1); // ref for heartbeat to see latest page without closure stale issues
+
+    // Update ref whenever pageNumber changes
+    useEffect(() => {
+        currentPageRef.current = pageNumber;
+    }, [pageNumber]);
 
     // Fetch PDF Metadata & Blob
     useEffect(() => {
@@ -164,24 +170,51 @@ const PDFReader = () => {
         };
     }, [id]);
 
-    // Session Management
+    // Session Management & Duration Heartbeat
     useEffect(() => {
+        let heartbeatInterval;
+
         const startSession = async () => {
             try {
-                const { data } = await api.post('/analytics/sessions/start', { pdfId: id });
+                const { data } = await api.post('/analytics/session/start', { pdfId: id });
                 setSessionId(data._id);
+
+                // Start duration heartbeat every 30 seconds
+                heartbeatInterval = setInterval(async () => {
+                    try {
+                        await api.post('/analytics/session/update', {
+                            sessionId: data._id,
+                            pageNumber: currentPageRef.current,
+                            duration: 30 // increment by 30 seconds
+                        });
+                    } catch (err) {
+                        console.error('Heartbeat failed', err);
+                    }
+                }, 30000);
             } catch (err) {
                 console.error('Failed to start session', err);
             }
         };
-        if (id) startSession();
+
+        if (id && !loading && !error) {
+            startSession();
+        }
 
         return () => {
-            if (id) {
-                api.post('/analytics/sessions/end', { pdfId: id }).catch(console.error);
-            }
+            if (heartbeatInterval) clearInterval(heartbeatInterval);
         };
-    }, [id]);
+    }, [id, loading, error]); // Re-start if id changes or loading finishes
+
+    // Separate page change notification (optional but good for accurate heatmaps)
+    useEffect(() => {
+        if (sessionId && pageNumber) {
+            api.post('/analytics/session/update', {
+                sessionId: sessionId,
+                pageNumber: pageNumber,
+                duration: 0 // just updating current page
+            }).catch(() => { }); // silent fail for page changes
+        }
+    }, [pageNumber, sessionId]);
 
     // Fetch notes
     useEffect(() => {

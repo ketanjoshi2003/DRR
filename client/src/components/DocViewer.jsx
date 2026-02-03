@@ -20,6 +20,41 @@ const DocViewer = () => {
     const [isFullScreen, setIsFullScreen] = useState(false);
     const [scale, setScale] = useState(100); // Percentage
     const [showInfo, setShowInfo] = useState(false);
+    const [sessionId, setSessionId] = useState(null);
+
+    // Reading Session Analytics
+    useEffect(() => {
+        let heartbeatInterval;
+
+        const startSession = async () => {
+            try {
+                const { data } = await api.post('/analytics/session/start', { pdfId: id });
+                setSessionId(data._id);
+
+                // Start duration heartbeat every 30 seconds
+                heartbeatInterval = setInterval(async () => {
+                    try {
+                        await api.post('/analytics/session/update', {
+                            sessionId: data._id,
+                            duration: 30
+                        });
+                    } catch (err) {
+                        console.error('Heartbeat failed', err);
+                    }
+                }, 30000);
+            } catch (err) {
+                console.error('Failed to start session', err);
+            }
+        };
+
+        if (id && !loading && !error) {
+            startSession();
+        }
+
+        return () => {
+            if (heartbeatInterval) clearInterval(heartbeatInterval);
+        };
+    }, [id, loading, error]);
 
     useEffect(() => {
         const fetchDoc = async () => {
