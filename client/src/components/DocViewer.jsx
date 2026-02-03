@@ -14,11 +14,12 @@ const DocViewer = () => {
     const navigate = useNavigate();
     const { isDarkMode, toggleTheme } = useAuth();
     const containerRef = useRef(null);
+    const viewerRef = useRef(null); // Ref for the main scrolling container
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [meta, setMeta] = useState(null);
     const [isFullScreen, setIsFullScreen] = useState(false);
-    const [scale, setScale] = useState(100); // Percentage
+    const [scale, setScale] = useState(window.innerWidth < 768 ? ((window.innerWidth - 32) / 850) * 100 : 100); // Percentage
     const [showInfo, setShowInfo] = useState(false);
     const [sessionId, setSessionId] = useState(null);
 
@@ -102,6 +103,33 @@ const DocViewer = () => {
         }
     }, [id]);
 
+    // Handle container resize for fluid responsiveness
+    useEffect(() => {
+        if (!viewerRef.current) return;
+
+        const handleResize = (entries) => {
+            for (let entry of entries) {
+                const { width } = entry.contentRect;
+                // Subtract padding (p-4 = 32px, md:p-8 = 64px)
+                const padding = window.innerWidth < 768 ? 32 : 64;
+                const availableWidth = width - padding;
+
+                // Doc base width is 850px (standard A4 with margins)
+                if (availableWidth < 850) {
+                    const newScale = (availableWidth / 850) * 100;
+                    setScale(Math.floor(newScale));
+                } else {
+                    setScale(100); // Fit 1:1 if it fits
+                }
+            }
+        };
+
+        const observer = new ResizeObserver(handleResize);
+        observer.observe(viewerRef.current);
+
+        return () => observer.disconnect();
+    }, []);
+
     useEffect(() => {
         const handleFullScreenChange = () => {
             setIsFullScreen(!!document.fullscreenElement);
@@ -145,24 +173,27 @@ const DocViewer = () => {
     return (
         <div ref={rootRef} className={`flex flex-col h-screen overflow-hidden transition-colors duration-200 ease-in-out bg-gray-100 dark:bg-black text-gray-900 dark:text-gray-100 ${isFullScreen ? 'fixed inset-0 z-50' : ''}`}>
 
-            <div className="flex-1 flex flex-col items-center relative overflow-auto custom-scrollbar">
+            <div
+                ref={viewerRef}
+                className="flex-1 flex flex-col items-center relative overflow-auto custom-scrollbar w-full"
+            >
 
                 {/* Floating Toolbar - Mimicking PDFReader */}
-                <div className={`sticky top-6 z-50 transition-all duration-150 ${isFullScreen ? 'w-auto' : 'w-full max-w-5xl'}`}>
-                    <div className="mx-auto bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-lg p-2 flex items-center justify-between gap-6 w-fit max-w-[95vw] shadow-lg dark:shadow-brand-500/5 transition-colors">
+                <div className={`sticky top-2 md:top-6 z-50 transition-all duration-150 ${isFullScreen ? 'w-auto' : 'w-full max-w-5xl'}`}>
+                    <div className="mx-auto bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-lg p-1.5 md:p-2 flex items-center justify-between gap-2 md:gap-6 w-fit max-w-[98vw] shadow-lg dark:shadow-brand-500/5 transition-colors">
 
                         <button
                             onClick={() => navigate('/')}
                             className="text-gray-600 dark:text-gray-400 hover:text-brand-600 dark:hover:text-brand-400 font-medium text-sm flex items-center gap-2 px-3 py-2 rounded-md hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors group"
                         >
-                            <ChevronLeft className="w-4 h-4" />
-                            <span className="hidden sm:inline">Library</span>
+                            <ChevronLeft className="w-5 h-5 md:w-4 md:h-4" />
+                            <span className="hidden lg:inline">Library</span>
                         </button>
 
                         <div className="h-6 w-px bg-gray-200 dark:bg-zinc-800" />
 
                         {/* Controls Group */}
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1 md:gap-2">
                             {/* Zoom Control */}
                             <div className="flex items-center gap-1 bg-gray-50 dark:bg-zinc-800 rounded-md p-1">
                                 <button
@@ -172,7 +203,7 @@ const DocViewer = () => {
                                 >
                                     <ZoomOut className="w-4 h-4" />
                                 </button>
-                                <span className="text-xs font-medium text-gray-700 dark:text-gray-300 min-w-[3.5rem] text-center select-none font-mono tabular-nums">
+                                <span className="text-[10px] md:text-xs font-medium text-gray-700 dark:text-gray-300 min-w-[2.5rem] md:min-w-[3.5rem] text-center select-none font-mono tabular-nums">
                                     {scale}%
                                 </span>
                                 <button
@@ -187,7 +218,7 @@ const DocViewer = () => {
 
                         <div className="h-6 w-px bg-gray-200 dark:bg-zinc-800" />
 
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1 md:gap-2">
                             <button
                                 onClick={toggleTheme}
                                 title={isDarkMode ? "Light Mode" : "Dark Mode"}
@@ -224,7 +255,7 @@ const DocViewer = () => {
                 </div>
 
                 {/* Content Area */}
-                <div className={`flex-1 w-full flex justify-center p-8 overflow-visible ${isDarkMode ? 'dark-mode-doc' : ''}`}>
+                <div className={`flex-1 w-full flex justify-center p-4 md:p-8 overflow-visible ${isDarkMode ? 'dark-mode-doc' : ''}`}>
                     <div
                         className={`bg-transparent relative transition-all duration-200 ease-linear ${loading ? 'opacity-0' : 'opacity-100'}`}
                         style={{
