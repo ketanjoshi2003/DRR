@@ -1,8 +1,8 @@
 const mongoose = require('mongoose');
-const Session = require('./models/Session');
-const User = require('./models/User');
-const Pdf = require('./models/Pdf');
-require('dotenv').config();
+const Session = require('../models/Session');
+const User = require('../models/User');
+const Pdf = require('../models/Pdf');
+require('dotenv').config({ path: '../.env' });
 
 const inspect = async () => {
     try {

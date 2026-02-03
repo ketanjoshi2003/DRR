@@ -8,6 +8,7 @@ export const useAuth = () => useContext(AuthContext);
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [isDarkMode, setIsDarkMode] = useState(localStorage.getItem('theme') === 'dark');
 
     useEffect(() => {
         const checkAuth = async () => {
@@ -26,6 +27,21 @@ export const AuthProvider = ({ children }) => {
         checkAuth();
     }, []);
 
+    // Theme logic
+    useEffect(() => {
+        if (isDarkMode) {
+            document.documentElement.classList.add('dark');
+            localStorage.setItem('theme', 'dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+            localStorage.setItem('theme', 'light');
+        }
+    }, [isDarkMode]);
+
+    const toggleTheme = () => {
+        setIsDarkMode(prev => !prev);
+    };
+
     const login = async (email, password) => {
         const { data } = await api.post('/auth/login', { email, password });
         localStorage.setItem('token', data.token);
@@ -33,8 +49,8 @@ export const AuthProvider = ({ children }) => {
         return data;
     };
 
-    const register = async (name, email, password, role) => {
-        const { data } = await api.post('/auth/register', { name, email, password, role });
+    const register = async (name, email, password, role, phone, instituteId) => {
+        const { data } = await api.post('/auth/register', { name, email, password, role, phone, instituteId });
         localStorage.setItem('token', data.token);
         setUser(data);
         return data;
@@ -52,7 +68,9 @@ export const AuthProvider = ({ children }) => {
         register,
         logout,
         isAuthenticated: !!user,
-        isAdmin: user?.role === 'admin'
+        isAdmin: user?.role === 'admin',
+        isDarkMode,
+        toggleTheme
     };
 
     return (

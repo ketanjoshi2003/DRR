@@ -1,9 +1,9 @@
 const mongoose = require('mongoose');
 const fs = require('fs');
-require('dotenv').config({ path: './.env' });
-const Course = require('./models/Course');
-const Semester = require('./models/Semester');
-const Subject = require('./models/Subject');
+require('dotenv').config({ path: '../.env' });
+const Course = require('../models/Course');
+const Semester = require('../models/Semester');
+const Subject = require('../models/Subject');
 
 const checkData = async () => {
     let output = '';

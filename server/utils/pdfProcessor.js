@@ -2,6 +2,7 @@ const fs = require('fs').promises;
 const pdfParse = require('pdf-parse');
 const Tesseract = require('tesseract.js');
 const path = require('path');
+const { PDFDocument } = require('pdf-lib');
 
 /**
  * PDF Processing Utility
@@ -16,25 +17,50 @@ const path = require('path');
 async function extractPDFMetadata(filePath) {
     try {
         const dataBuffer = await fs.readFile(filePath);
+
+        // Use modern pdf-lib for metadata (much more reliable)
+        let metadata = {};
+        let numPages = 0;
+        try {
+            const pdfDoc = await PDFDocument.load(dataBuffer, {
+                updateMetadata: false,
+                ignoreEncryption: true
+            });
+            metadata = {
+                title: pdfDoc.getTitle() || null,
+                author: pdfDoc.getAuthor() || null,
+                subject: pdfDoc.getSubject() || null,
+                creator: pdfDoc.getCreator() || null,
+                producer: pdfDoc.getProducer() || null,
+                creationDate: pdfDoc.getCreationDate() || null,
+                modificationDate: pdfDoc.getModificationDate() || null,
+                keywords: pdfDoc.getKeywords() || null,
+            };
+            numPages = pdfDoc.getPageCount();
+        } catch (libError) {
+            console.warn('pdf-lib failed to parse metadata, falling back to pdf-parse:', libError.message);
+        }
+
+        // Use pdf-parse for text content
         const pdfData = await pdfParse(dataBuffer);
 
         return {
             metadata: {
-                title: pdfData.info?.Title || null,
-                author: pdfData.info?.Author || null,
-                subject: pdfData.info?.Subject || null,
-                creator: pdfData.info?.Creator || null,
-                producer: pdfData.info?.Producer || null,
-                creationDate: pdfData.info?.CreationDate || null,
-                modificationDate: pdfData.info?.ModDate || null,
-                keywords: pdfData.info?.Keywords || null,
+                title: metadata.title || pdfData.info?.Title || null,
+                author: metadata.author || pdfData.info?.Author || null,
+                subject: metadata.subject || pdfData.info?.Subject || null,
+                creator: metadata.creator || pdfData.info?.Creator || null,
+                producer: metadata.producer || pdfData.info?.Producer || null,
+                creationDate: metadata.creationDate || pdfData.info?.CreationDate || null,
+                modificationDate: metadata.modificationDate || pdfData.info?.ModDate || null,
+                keywords: metadata.keywords || pdfData.info?.Keywords || null,
             },
             content: {
-                text: pdfData.text,
-                numPages: pdfData.numpages,
+                text: pdfData.text || '',
+                numPages: numPages || pdfData.numpages || 0,
                 version: pdfData.version,
             },
-            searchableText: pdfData.text.trim().length > 0
+            searchableText: (pdfData.text || '').trim().length > 0
         };
     } catch (error) {
         console.error('Error extracting PDF metadata:', error);
@@ -48,13 +74,21 @@ async function extractPDFMetadata(filePath) {
  * @param {number} maxPages - Maximum pages to process (default: 5)
  * @returns {Promise<Object>} OCR results
  */
-async function performOCR(filePath, maxPages = 5) {
+async function performOCR(filePath, maxPages = 5, language = 'eng') {
     try {
+        // Tesseract language mapping
+        const langMap = {
+            'english': 'eng',
+            'hindi': 'hin',
+            'marathi': 'mar'
+        };
+        const tesseractLang = langMap[language] || 'eng';
+
         // Note: This is a simplified OCR implementation
         // For production, you might want to convert PDF pages to images first
         const { data: { text } } = await Tesseract.recognize(
             filePath,
-            'eng',
+            tesseractLang,
             {
                 logger: m => console.log(`OCR Progress: ${Math.round(m.progress * 100)}%`)
             }
@@ -84,7 +118,8 @@ async function performOCR(filePath, maxPages = 5) {
 async function processUploadedPDF(filePath, options = {}) {
     const {
         performOCRIfNeeded = true,
-        ocrMaxPages = 5
+        ocrMaxPages = 5,
+        language = 'english'
     } = options;
 
     try {
@@ -96,8 +131,8 @@ async function processUploadedPDF(filePath, options = {}) {
 
         let ocrResult = null;
         if (needsOCR) {
-            console.log('PDF appears to be scanned. Performing OCR...');
-            ocrResult = await performOCR(filePath, ocrMaxPages);
+            console.log(`PDF appears to be scanned. Performing OCR in ${language}...`);
+            ocrResult = await performOCR(filePath, ocrMaxPages, language);
         }
 
         return {

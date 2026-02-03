@@ -15,9 +15,17 @@ const UserSchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    phone: {
+        type: String,
+        required: false
+    },
+    instituteId: {
+        type: String,
+        required: false
+    },
     role: {
         type: String,
-        enum: ['admin', 'reader'],
+        enum: ['admin', 'librarian', 'reader', 'guest'],
         default: 'reader'
     }
 }, { timestamps: true });

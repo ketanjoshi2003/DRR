@@ -15,7 +15,7 @@ const generateToken = (id) => {
 // @route   POST /api/auth/register
 // @access  Public
 router.post('/register', async (req, res) => {
-    const { name, email, password, role } = req.body;
+    const { name, email, password, role, phone, instituteId } = req.body;
 
     try {
         const userExists = await User.findOne({ email });
@@ -28,7 +28,9 @@ router.post('/register', async (req, res) => {
             name,
             email,
             password,
-            role: role || 'reader'
+            role: role || 'reader',
+            phone,
+            instituteId
         });
 
         if (user) {
@@ -81,7 +83,45 @@ router.get('/me', protect, async (req, res) => {
         name: req.user.name,
         email: req.user.email,
         role: req.user.role,
+        phone: req.user.phone,
+        instituteId: req.user.instituteId,
     });
+});
+
+// @desc    Update user profile
+// @route   PUT /api/auth/profile
+// @access  Private
+router.put('/profile', protect, async (req, res) => {
+    try {
+        const user = await User.findById(req.user._id);
+
+        if (user) {
+            user.name = req.body.name || user.name;
+            user.email = req.body.email || user.email;
+            user.phone = req.body.phone || user.phone;
+            user.instituteId = req.body.instituteId || user.instituteId;
+
+            if (req.body.password) {
+                user.password = req.body.password;
+            }
+
+            const updatedUser = await user.save();
+
+            res.json({
+                _id: updatedUser._id,
+                name: updatedUser.name,
+                email: updatedUser.email,
+                role: updatedUser.role,
+                phone: updatedUser.phone,
+                instituteId: updatedUser.instituteId,
+                token: generateToken(updatedUser._id),
+            });
+        } else {
+            res.status(404).json({ message: 'User not found' });
+        }
+    } catch (error) {
+        res.status(500).json({ message: 'Server error', error: error.message });
+    }
 });
 
 // @desc    Get all users
@@ -91,6 +131,41 @@ router.get('/users', protect, authorize('admin'), async (req, res) => {
     try {
         const users = await User.find({}).select('-password').sort('-createdAt');
         res.json(users);
+    } catch (error) {
+        res.status(500).json({ message: 'Server error', error: error.message });
+    }
+});
+
+// @desc    Request password reset
+// @route   POST /api/auth/forgot-password
+// @access  Public
+router.post('/forgot-password', async (req, res) => {
+    const { email } = req.body;
+    try {
+        const user = await User.findOne({ email });
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+        // In a real app, generate a token, save to DB, and send email
+        res.json({ message: 'Password reset link sent to email (Mock)' });
+    } catch (error) {
+        res.status(500).json({ message: 'Server error', error: error.message });
+    }
+});
+
+// @desc    Reset password
+// @route   POST /api/auth/reset-password
+// @access  Public
+router.post('/reset-password', async (req, res) => {
+    const { token, password } = req.body;
+    try {
+        // Mocking token validation
+        if (token === 'valid_token') {
+            // find user by token and update password
+            res.json({ message: 'Password updated successfully' });
+        } else {
+            res.status(400).json({ message: 'Invalid or expired token' });
+        }
     } catch (error) {
         res.status(500).json({ message: 'Server error', error: error.message });
     }

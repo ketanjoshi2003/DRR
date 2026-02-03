@@ -4,6 +4,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const Pdf = require('../models/Pdf');
+const Session = require('../models/Session');
 const { protect, authorize } = require('../middleware/auth.middleware');
 
 // Configure Multer
@@ -18,10 +19,20 @@ const storage = multer.diskStorage({
 });
 
 const fileFilter = (req, file, cb) => {
-    if (file.mimetype === 'application/pdf') {
+    const allowedTypes = [
+        'application/pdf',
+        'application/epub+zip',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'image/jpeg',
+        'image/png',
+        'audio/mpeg',
+        'video/mp4'
+    ];
+    if (allowedTypes.includes(file.mimetype)) {
         cb(null, true);
     } else {
-        cb(new Error('Only PDF files are allowed!'), false);
+        cb(new Error('File type not supported'), false);
     }
 };
 
@@ -45,16 +56,18 @@ router.post('/upload', protect, authorize('admin'), upload.single('file'), async
 
         const filePath = path.join(__dirname, '..', process.env.UPLOAD_PATH || 'uploads', req.file.filename);
 
-        // Process PDF asynchronously
+        // Process PDF asynchronously if it is a PDF
         let processedData = null;
-        try {
-            processedData = await processUploadedPDF(filePath, {
-                performOCRIfNeeded: true,
-                ocrMaxPages: 5
-            });
-        } catch (processingError) {
-            console.error('PDF processing error:', processingError);
-            // Continue with upload even if processing fails
+        if (req.file.mimetype === 'application/pdf') {
+            try {
+                processedData = await processUploadedPDF(filePath, {
+                    performOCRIfNeeded: true,
+                    ocrMaxPages: 5
+                });
+            } catch (processingError) {
+                console.error('PDF processing error:', processingError);
+                // Continue with upload even if processing fails
+            }
         }
 
         // Auto-generate title if not provided
@@ -67,8 +80,14 @@ router.post('/upload', protect, authorize('admin'), upload.single('file'), async
             originalName: req.file.originalname,
             size: req.file.size,
             uploadedBy: req.user._id,
+            type: req.body.type || 'pdf',
+            accessControl: req.body.accessControl ? JSON.parse(req.body.accessControl) : undefined,
             // Metadata from PDF
-            metadata: processedData?.metadata || {},
+            metadata: {
+                ...(processedData?.metadata || {}),
+                year: req.body.year,
+                language: req.body.language
+            },
             extractedText: processedData?.content?.text || '',
             ocrText: processedData?.ocr?.ocrText || '',
             isSearchable: processedData?.isSearchable || false,
@@ -110,27 +129,50 @@ router.post('/bulk-upload', protect, authorize('admin'), upload.array('files', 2
             try {
                 const filePath = path.join(__dirname, '..', process.env.UPLOAD_PATH || 'uploads', file.filename);
 
-                // Process PDF
+                // Process PDF if it is a PDF
                 let processedData = null;
-                try {
-                    processedData = await processUploadedPDF(filePath, {
-                        performOCRIfNeeded: true,
-                        ocrMaxPages: 3 // Reduced for bulk processing
-                    });
-                } catch (processingError) {
-                    console.error(`Processing error for ${file.originalname}:`, processingError);
+                if (file.mimetype === 'application/pdf') {
+                    try {
+                        processedData = await processUploadedPDF(filePath, {
+                            performOCRIfNeeded: true,
+                            ocrMaxPages: 3, // Reduced for bulk processing
+                            language: req.body.language
+                        });
+                    } catch (processingError) {
+                        console.error(`Processing error for ${file.originalname}:`, processingError);
+                    }
                 }
 
-                // Auto-generate title
-                const title = processedData ? generateTitle(processedData, file.originalname) : file.originalname;
+                // Infer file type
+                const mimeToType = {
+                    'application/pdf': 'pdf',
+                    'application/epub+zip': 'epub',
+                    'application/msword': 'doc',
+                    'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'doc',
+                    'image/jpeg': 'image',
+                    'image/png': 'image',
+                    'audio/mpeg': 'audio',
+                    'video/mp4': 'video'
+                };
+                const fileType = mimeToType[file.mimetype] || 'other'; // Default to 'other' if mimetype not recognized
+
+                // Auto-generate title if not provided
+                const title = req.body.title ||
+                    (processedData ? generateTitle(processedData, file.originalname) : file.originalname);
 
                 const pdf = await Pdf.create({
                     title: title,
                     filename: file.filename,
                     originalName: file.originalname,
                     size: file.size,
+                    type: fileType,
                     uploadedBy: req.user._id,
-                    metadata: processedData?.metadata || {},
+                    accessControl: req.body.accessControl ? JSON.parse(req.body.accessControl) : undefined,
+                    metadata: {
+                        ...(processedData?.metadata || {}),
+                        language: req.body.language,
+                        year: req.body.year
+                    },
                     extractedText: processedData?.content?.text || '',
                     ocrText: processedData?.ocr?.ocrText || '',
                     isSearchable: processedData?.isSearchable || false,
@@ -213,6 +255,39 @@ router.get('/:id/stream', protect, async (req, res) => {
             return res.status(404).json({ message: 'File not found on server' });
         }
 
+        // Access Control Checks
+        if (pdf.accessControl?.isProtected) {
+            // Check IP
+            if (pdf.accessControl.allowedIps?.length > 0) {
+                const clientIp = req.ip || req.connection.remoteAddress;
+                if (!pdf.accessControl.allowedIps.includes(clientIp)) {
+                    return res.status(403).json({ message: 'Access denied from this IP' });
+                }
+            }
+            // Check Institution
+            if (pdf.accessControl.allowedInstitutes?.length > 0) {
+                if (!pdf.accessControl.allowedInstitutes.includes(req.user.instituteId)) {
+                    return res.status(403).json({ message: 'Access denied for your institution' });
+                }
+            }
+            // Download restriction
+            if (req.query.download === 'true' && !pdf.accessControl.allowDownload) {
+                return res.status(403).json({ message: 'Download is not allowed for this document' });
+            }
+            // Concurrent limit check
+            if (pdf.accessControl.concurrentLimit > 0) {
+                const activeSessionThreshold = new Date(Date.now() - 5 * 60 * 1000); // 5 mins
+                const activeSessions = await Session.countDocuments({
+                    pdfId: pdf._id,
+                    updatedAt: { $gt: activeSessionThreshold },
+                    endTime: { $exists: false }
+                });
+                if (activeSessions >= pdf.accessControl.concurrentLimit) {
+                    return res.status(429).json({ message: 'Concurrent user limit reached for this document' });
+                }
+            }
+        }
+
         const stat = fs.statSync(filePath);
         const fileSize = stat.size;
         const range = req.headers.range;
@@ -223,18 +298,50 @@ router.get('/:id/stream', protect, async (req, res) => {
             const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
             const chunksize = (end - start) + 1;
             const file = fs.createReadStream(filePath, { start, end });
+            const getMimeType = (pdf) => {
+                const ext = path.extname(pdf.filename).toLowerCase();
+                const mimeMap = {
+                    '.pdf': 'application/pdf',
+                    '.png': 'image/png',
+                    '.jpg': 'image/jpeg',
+                    '.jpeg': 'image/jpeg',
+                    '.gif': 'image/gif',
+                    '.epub': 'application/epub+zip',
+                    '.mp3': 'audio/mpeg',
+                    '.mp4': 'video/mp4'
+                };
+                return mimeMap[ext] || 'application/octet-stream';
+            };
+
             const head = {
                 'Content-Range': `bytes ${start}-${end}/${fileSize}`,
                 'Accept-Ranges': 'bytes',
                 'Content-Length': chunksize,
-                'Content-Type': 'application/pdf',
+                'Content-Type': getMimeType(pdf),
+                'Cross-Origin-Resource-Policy': 'cross-origin'
             };
             res.writeHead(206, head);
             file.pipe(res);
         } else {
+            const getMimeType = (pdf) => {
+                const ext = path.extname(pdf.filename).toLowerCase();
+                const mimeMap = {
+                    '.pdf': 'application/pdf',
+                    '.png': 'image/png',
+                    '.jpg': 'image/jpeg',
+                    '.jpeg': 'image/jpeg',
+                    '.gif': 'image/gif',
+                    '.epub': 'application/epub+zip',
+                    '.mp3': 'audio/mpeg',
+                    '.mp4': 'video/mp4'
+                };
+                return mimeMap[ext] || 'application/octet-stream';
+            };
+
             const head = {
                 'Content-Length': fileSize,
-                'Content-Type': 'application/pdf',
+                'Content-Type': getMimeType(pdf),
+                'Cross-Origin-Resource-Policy': 'cross-origin'
             };
             res.writeHead(200, head);
             fs.createReadStream(filePath).pipe(res);
@@ -310,7 +417,7 @@ router.delete('/:id', protect, authorize('admin'), async (req, res) => {
 // @access  Admin
 router.put('/:id', protect, authorize('admin'), async (req, res) => {
     try {
-        const { title, metadata } = req.body;
+        const { title, metadata, type, accessControl } = req.body;
         const pdf = await Pdf.findById(req.params.id);
 
         if (!pdf) {
@@ -318,6 +425,8 @@ router.put('/:id', protect, authorize('admin'), async (req, res) => {
         }
 
         if (title) pdf.title = title;
+        if (type) pdf.type = type;
+        if (accessControl) pdf.accessControl = accessControl;
         if (metadata) {
             pdf.metadata = {
                 ...pdf.metadata,

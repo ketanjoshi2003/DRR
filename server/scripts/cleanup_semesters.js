@@ -1,8 +1,8 @@
 const mongoose = require('mongoose');
-const Semester = require('./models/Semester');
+const Semester = require('../models/Semester');
 const path = require('path');
-require('dotenv').config({ path: path.join(__dirname, '.env') });
-const connectDB = require('./db');
+require('dotenv').config({ path: path.join(__dirname, '../.env') });
+const connectDB = require('../db');
 
 const cleanup = async () => {
     await connectDB();

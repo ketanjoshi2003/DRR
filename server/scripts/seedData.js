@@ -1,10 +1,10 @@
 const mongoose = require('mongoose');
-const Course = require('./models/Course');
-const Semester = require('./models/Semester');
-const Subject = require('./models/Subject');
+const Course = require('../models/Course');
+const Semester = require('../models/Semester');
+const Subject = require('../models/Subject');
 const path = require('path');
-require('dotenv').config({ path: path.join(__dirname, '.env') });
-const connectDB = require('./db');
+require('dotenv').config({ path: path.join(__dirname, '../.env') });
+const connectDB = require('../db');
 
 const courses = [
     { name: 'Master of Computer Applications', code: 'MCA', totalSemesters: 4 }

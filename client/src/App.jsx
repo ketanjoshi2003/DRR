@@ -6,11 +6,12 @@ import Layout from './components/Layout';
 import PDFList from './components/PDFList';
 import PDFReader from './components/PDFReader';
 import AdminDashboard from './components/AdminDashboard';
-import DatabaseManager from './components/DatabaseManager';
 import CourseList from './components/CourseList';
 
 import SubjectList from './components/SubjectList';
 import SemesterList from './components/SemesterList';
+import ImageViewer from './components/ImageViewer';
+import DocViewer from './components/DocViewer';
 
 const PrivateRoute = ({ children, adminOnly = false }) => {
   const { user, loading } = useAuth();
@@ -51,13 +52,23 @@ function AppRoutes() {
           </PrivateRoute>
         } />
         <Route path="/semesters" element={
-          <PrivateRoute>
+          <PrivateRoute adminOnly>
             <SemesterList />
           </PrivateRoute>
         } />
         <Route path="/read/:id" element={
           <PrivateRoute>
             <PDFReader />
+          </PrivateRoute>
+        } />
+        <Route path="/view-image/:id" element={
+          <PrivateRoute>
+            <ImageViewer />
+          </PrivateRoute>
+        } />
+        <Route path="/view-document/:id" element={
+          <PrivateRoute>
+            <DocViewer />
           </PrivateRoute>
         } />
         <Route path="/upload" element={
@@ -68,11 +79,6 @@ function AppRoutes() {
         <Route path="/analytics" element={
           <PrivateRoute adminOnly>
             <AdminDashboard tab="analytics" />
-          </PrivateRoute>
-        } />
-        <Route path="/database" element={
-          <PrivateRoute adminOnly>
-            <DatabaseManager />
           </PrivateRoute>
         } />
       </Route>

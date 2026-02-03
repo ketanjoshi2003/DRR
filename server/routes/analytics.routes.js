@@ -224,4 +224,17 @@ router.get('/overview', protect, authorize('admin'), async (req, res) => {
     }
 });
 
+// @desc    Reset all analytics data
+// @route   DELETE /api/analytics/reset
+// @access  Admin
+router.delete('/reset', protect, authorize('admin'), async (req, res) => {
+    try {
+        await Session.deleteMany({});
+        res.json({ message: 'Analytics data cleared successfully' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server Error', error: error.message });
+    }
+});
+
 module.exports = router;

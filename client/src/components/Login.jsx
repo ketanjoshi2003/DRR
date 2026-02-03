@@ -22,21 +22,21 @@ const Login = () => {
     };
 
     return (
-        <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8 animate-fade-in">
+        <div className="min-h-screen bg-gray-50 dark:bg-black flex flex-col justify-center py-12 sm:px-6 lg:px-8 animate-fade-in transition-colors duration-150">
             <div className="sm:mx-auto sm:w-full sm:max-w-md">
                 <div className="flex justify-center">
                     <BookOpen className="w-12 h-12 text-brand-600" />
                 </div>
-                <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+                <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900 dark:text-gray-100">
                     Sign in to Digital Room Reader
                 </h2>
             </div>
 
             <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-                <div className="bg-white py-8 px-4 border border-gray-200 rounded-xl sm:px-10">
+                <div className="bg-white dark:bg-zinc-950 py-8 px-4 border border-gray-200 dark:border-zinc-800 rounded-xl sm:px-10 shadow-sm dark:shadow-zinc-900/50">
                     <form className="space-y-6" onSubmit={handleSubmit}>
                         {error && (
-                            <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded text-sm">
+                            <div className="bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-900/50 text-red-600 dark:text-red-400 px-4 py-3 rounded text-sm">
                                 {error}
                             </div>
                         )}
@@ -73,6 +73,11 @@ const Login = () => {
                                     onChange={(e) => setPassword(e.target.value)}
                                     className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-brand-500 focus:border-brand-500 sm:text-sm"
                                 />
+                            </div>
+                            <div className="mt-1 text-right">
+                                <Link to="/forgot-password" size="sm" className="text-xs text-brand-600 hover:text-brand-500">
+                                    Forgot password?
+                                </Link>
                             </div>
                         </div>
 

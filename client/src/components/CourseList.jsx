@@ -140,7 +140,7 @@ const CourseList = () => {
     return (
         <div>
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-                <h1 className="text-2xl font-bold">Courses</h1>
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Courses</h1>
 
                 <div className="flex flex-col md:flex-row gap-3 items-center w-full md:w-auto">
                     <div className="relative w-full md:w-[200px]">
@@ -150,7 +150,7 @@ const CourseList = () => {
                         <input
                             type="text"
                             placeholder="Search Courses..."
-                            className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-brand-500 focus:border-brand-500 sm:text-sm"
+                            className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-zinc-800 rounded-md leading-5 bg-white dark:bg-zinc-900 text-gray-900 dark:text-gray-100 placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-brand-500 focus:border-brand-500 sm:text-sm transition-colors"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                         />
@@ -178,14 +178,14 @@ const CourseList = () => {
                                 <div className="flex gap-2">
                                     <button
                                         onClick={handleSelectAll}
-                                        className="px-3 py-1.5 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 text-sm font-medium"
+                                        className="px-3 py-1.5 bg-gray-200 dark:bg-zinc-800 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-zinc-700 text-sm font-medium transition-colors"
                                     >
                                         {selectedIds.length === filteredCourses.length ? 'Deselect All' : 'Select All'}
                                     </button>
                                     <button
                                         onClick={handleDeleteSelected}
                                         disabled={selectedIds.length === 0}
-                                        className="px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 text-sm font-medium"
+                                        className="px-3 py-1.5 bg-red-600 dark:bg-red-700 text-white rounded-lg hover:bg-red-700 dark:hover:bg-red-600 disabled:opacity-50 text-sm font-medium transition-colors"
                                     >
                                         Delete ({selectedIds.length})
                                     </button>
@@ -194,7 +194,7 @@ const CourseList = () => {
                                             setIsDeleteMode(false);
                                             setSelectedIds([]);
                                         }}
-                                        className="px-3 py-1.5 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium"
+                                        className="px-3 py-1.5 bg-white dark:bg-zinc-900 border border-gray-300 dark:border-zinc-800 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-zinc-800 text-sm font-medium transition-colors"
                                     >
                                         Cancel
                                     </button>
@@ -228,16 +228,16 @@ const CourseList = () => {
                     return (
                         <div
                             key={course._id}
-                            className={`bg-white rounded-xl border p-6 transition-all duration-300 transform-gpu flex flex-col h-full ${isDeleteMode
-                                ? 'cursor-pointer hover:bg-red-50 border-red-200'
-                                : 'border-gray-200 hover:border-brand-300 hover:shadow-lg hover:-translate-y-1'
-                                } ${selectedIds.includes(course._id) ? 'ring-2 ring-red-500 bg-red-50' : ''}`}
+                            className={`bg-white dark:bg-zinc-950 rounded-xl border p-6 transition-all duration-150 transform-gpu flex flex-col h-full ${isDeleteMode
+                                ? 'cursor-pointer hover:bg-red-50 dark:hover:bg-red-950/20 border-red-200 dark:border-red-900/50'
+                                : 'border-gray-200 dark:border-zinc-800 hover:border-brand-300 dark:hover:border-brand-700 hover:shadow-lg dark:hover:shadow-brand-500/10 hover:-translate-y-1'
+                                } ${selectedIds.includes(course._id) ? 'ring-2 ring-red-500 bg-red-50 dark:bg-red-950/20' : ''}`}
                             onClick={() => isDeleteMode && toggleSelection(course._id)}
                         >
                             <div className="flex-1">
                                 <div className="flex items-start justify-between mb-4">
-                                    <div className="p-3 bg-brand-50 rounded-lg">
-                                        <Book className="w-8 h-8 text-brand-600" />
+                                    <div className="p-3 bg-brand-50 dark:bg-brand-900/40 rounded-lg">
+                                        <Book className="w-8 h-8 text-brand-600 dark:text-brand-400" />
                                     </div>
                                     {isDeleteMode && (
                                         <div className="flex items-center">
@@ -250,15 +250,15 @@ const CourseList = () => {
                                         </div>
                                     )}
                                 </div>
-                                <h3 className="text-lg font-medium text-gray-900">{course.name}</h3>
-                                <p className="text-sm text-gray-500 font-mono mt-1">{course.code}</p>
-                                <p className="mt-2 text-gray-600 text-sm line-clamp-3">
+                                <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">{course.name}</h3>
+                                <p className="text-sm text-gray-500 dark:text-gray-400 font-mono mt-1">{course.code}</p>
+                                <p className="mt-2 text-gray-600 dark:text-gray-400 text-sm line-clamp-3">
                                     {course.description || 'No description available.'}
                                 </p>
 
                                 {/* Semester Dropdown */}
                                 <div className="mt-4">
-                                    <label className="text-xs text-gray-500 font-medium uppercase tracking-wide">Select Semester</label>
+                                    <label className="text-xs text-gray-500 dark:text-gray-400 font-medium uppercase tracking-wide">Select Semester</label>
                                     <div className="relative mt-1">
                                         <CustomSelect
                                             value={selectedSemesters[course._id] || 'all'}
@@ -275,16 +275,18 @@ const CourseList = () => {
                             <div className="mt-4 flex justify-between items-center gap-3">
                                 <button
                                     onClick={() => handleViewSubjects(course._id)}
-                                    className="flex-1 text-center px-4 py-2 bg-brand-600 text-white text-sm font-medium rounded-lg hover:bg-brand-700 transition-colors shadow-sm"
+                                    className="flex-1 text-center px-4 py-2 bg-brand-600 dark:bg-brand-700 text-white text-sm font-medium rounded-lg hover:bg-brand-700 dark:hover:bg-brand-600 transition-colors shadow-sm dark:shadow-brand-500/10"
                                 >
                                     View Subjects
                                 </button>
-                                <button
-                                    onClick={() => navigate(`/semesters?courseId=${course._id}`)}
-                                    className="text-sm text-gray-500 hover:text-brand-600 font-medium hover:bg-brand-50 px-3 py-2 rounded-lg transition-colors"
-                                >
-                                    Manage Semesters
-                                </button>
+                                {user?.role === 'admin' && (
+                                    <button
+                                        onClick={() => navigate(`/semesters?courseId=${course._id}`)}
+                                        className="text-sm text-gray-500 dark:text-gray-400 hover:text-brand-600 dark:hover:text-brand-400 font-medium hover:bg-brand-50 dark:hover:bg-brand-900/20 px-3 py-2 rounded-lg transition-colors"
+                                    >
+                                        Manage Semesters
+                                    </button>
+                                )}
                             </div>
                         </div>
                     );
