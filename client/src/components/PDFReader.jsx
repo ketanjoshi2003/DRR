@@ -104,7 +104,15 @@ const PDFReader = () => {
                 setPdfMeta(meta);
 
                 if (meta.type && meta.type !== 'pdf') {
-                    setError(`This viewer only supports PDF files. Current file type: ${meta.type.toUpperCase()}`);
+                    if (meta.type === 'image') {
+                        setError('This is an Image file. Redirecting to Image Viewer...');
+                        setTimeout(() => navigate(`/view-image/${id}`), 1500);
+                    } else if (meta.type === 'doc' || meta.originalName?.toLowerCase().endsWith('.docx')) {
+                        setError('This is a Word document. Redirecting to Document Viewer...');
+                        setTimeout(() => navigate(`/view-document/${id}`), 1500);
+                    } else {
+                        setError(`This viewer only supports PDF files. Current file type: ${meta.type.toUpperCase()}`);
+                    }
                     setLoading(false);
                     return;
                 }

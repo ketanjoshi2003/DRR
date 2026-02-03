@@ -47,13 +47,25 @@ const MyCollection = () => {
         if (!t || t === 'other') {
             if (ext.endsWith('.pdf')) t = 'pdf';
             else if (ext.match(/\.(png|jpg|jpeg|gif|webp)$/)) t = 'image';
+            else if (ext.endsWith('.docx') || type === 'doc') t = 'docx';
         }
 
         switch (t) {
             case 'pdf': return <FileText className="w-5 h-5 text-brand-600" />;
             case 'image': return <ImageIcon className="w-5 h-5 text-blue-600" />;
+            case 'docx': return <FileText className="w-5 h-5 text-blue-600" />;
             default: return <File className="w-5 h-5 text-gray-600" />;
         }
+    };
+
+    const getViewLink = (pdf) => {
+        const name = pdf.originalName?.toLowerCase() || '';
+        const isImage = name.endsWith('.png') || name.endsWith('.jpg') || name.endsWith('.jpeg') || name.endsWith('.gif') || pdf.type === 'image';
+        const isDoc = name.endsWith('.docx') || pdf.type === 'doc';
+
+        if (isImage) return `/view-image/${pdf._id}`;
+        if (isDoc) return `/view-document/${pdf._id}`;
+        return `/read/${pdf._id}`;
     };
 
     if (loading) return (
@@ -132,10 +144,12 @@ const MyCollection = () => {
                                     <Clock className="w-3 h-3" /> Saved on {new Date(pdf.createdAt).toLocaleDateString()}
                                 </p>
                                 <Link
-                                    to={`/read/${pdf._id}`}
+                                    to={getViewLink(pdf)}
                                     className="w-full flex items-center justify-center gap-2 py-2 bg-brand-50 dark:bg-brand-900/10 text-brand-600 dark:text-brand-400 text-sm font-bold rounded-lg hover:bg-brand-600 hover:text-white dark:hover:bg-brand-600 transition-all"
                                 >
-                                    Read Material <ChevronRight className="w-4 h-4" />
+                                    {pdf.originalName?.toLowerCase().endsWith('.docx') ? 'View Document' :
+                                        pdf.originalName?.toLowerCase().match(/\.(png|jpg|jpeg|gif)$/) ? 'View Image' :
+                                            'Read Material'} <ChevronRight className="w-4 h-4" />
                                 </Link>
                             </div>
                         ))}

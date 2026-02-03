@@ -156,11 +156,23 @@ const SubjectList = () => {
 
     // Filter subjects first
     const filteredSubjects = subjects.filter(s => {
-        if (selectedCourse !== 'all' && s.course?._id !== selectedCourse) return false;
-        if (selectedSemester !== 'all' && s.semester?._id !== selectedSemester) return false;
+        const sCourseId = s.course?._id || s.course;
+        const sSemesterId = s.semester?._id || s.semester;
+
+        if (selectedCourse !== 'all' && sCourseId !== selectedCourse) return false;
+        if (selectedSemester !== 'all' && sSemesterId !== selectedSemester) return false;
+
         if (searchQuery) {
             const query = searchQuery.toLowerCase();
-            return s.name.toLowerCase().includes(query) || s.code.toLowerCase().includes(query);
+            const courseName = s.course?.name || '';
+            const semesterName = s.semester?.name || '';
+
+            return (
+                s.name.toLowerCase().includes(query) ||
+                s.code.toLowerCase().includes(query) ||
+                courseName.toLowerCase().includes(query) ||
+                semesterName.toLowerCase().includes(query)
+            );
         }
         return true;
     });
@@ -232,7 +244,10 @@ const SubjectList = () => {
                                 onChange={setSelectedSemester}
                                 options={[
                                     { value: 'all', label: 'All Semesters' },
-                                    ...sortedSemesterNames.map(name => ({ value: name, label: name }))
+                                    ...filteredSemesters.map(s => ({
+                                        value: s._id,
+                                        label: selectedCourse === 'all' ? `${s.name} (${s.course?.code || '?'})` : s.name
+                                    }))
                                 ]}
                                 placeholder="Filter by Semester"
                             />
