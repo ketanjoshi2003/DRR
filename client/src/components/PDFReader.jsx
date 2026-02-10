@@ -15,33 +15,36 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL(
 ).toString();
 
 // Memoized Page Component
-const PageContent = memo(({ pageNumber, scale, notes }) => {
+const PageContent = memo(({ pageNumber, scale, notes, selection }) => {
     const textRenderer = useCallback(({ str }) => {
         if (!str) return str;
 
-        const isHighlighted = notes.some(n => {
+        // Helper for fuzzy matching
+        const clean = (s) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+        const fuzzy = (s) => clean(s).replace(/[l1]/g, 'i');
+        const strFuzzy = fuzzy(str);
+
+        if (strFuzzy.length === 0) return str;
+
+        // Check saved notes
+        const isNote = notes.some(n => {
             if (n.pageNumber !== pageNumber) return false;
-
-            // Ultra-Fuzzy Matching: Strip everything except alphanumeric, then fuzzy match i/l/1
-            // This handles spacing, punctuation (hyphens), and OCR errors
-            const clean = (s) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
-            const fuzzy = (s) => clean(s).replace(/[l1]/g, 'i');
-
             const noteFuzzy = fuzzy(n.selectedText);
-            const strFuzzy = fuzzy(str);
-
-            return strFuzzy.length > 0 && noteFuzzy.includes(strFuzzy);
+            return (noteFuzzy.includes(strFuzzy) || strFuzzy.includes(noteFuzzy));
         });
 
-        if (isHighlighted) {
+        // Check temporary selection
+        const isSelected = selection && selection.page === pageNumber && (fuzzy(selection.text).includes(strFuzzy) || strFuzzy.includes(fuzzy(selection.text)));
+
+        if (isNote || isSelected) {
             return (
-                <mark className="bg-yellow-300 mix-blend-multiply text-transparent rounded-[2px]" title="Note available">
+                <mark className={`${isSelected ? 'bg-purple-300/50' : 'bg-yellow-500/40'} text-transparent rounded-[2px]`} title={isNote ? "Note available" : "New selection"}>
                     {str}
                 </mark>
             );
         }
         return str;
-    }, [notes, pageNumber]);
+    }, [notes, pageNumber, selection]);
 
     return (
         <Page
@@ -50,8 +53,8 @@ const PageContent = memo(({ pageNumber, scale, notes }) => {
             scale={scale}
             renderTextLayer={true}
             renderAnnotationLayer={true}
-            className="bg-white"
-            loading={<div className="h-[800px] w-[600px] bg-white animate-pulse" />}
+            className="bg-white shadow-sm"
+            loading={<div className="h-[800px] w-full bg-white animate-pulse" />}
             customTextRenderer={textRenderer}
         />
     );
@@ -572,6 +575,7 @@ const PDFReader = () => {
                                     pageNumber={index + 1}
                                     scale={scale}
                                     notes={notes}
+                                    selection={selection}
                                 />
                                 <div className="absolute bottom-4 right-4 bg-black/50 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
                                     Page {index + 1}

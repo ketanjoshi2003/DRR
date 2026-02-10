@@ -10,6 +10,7 @@ const Register = () => {
     const [role, setRole] = useState('reader');
     const [phone, setPhone] = useState('');
     const [instituteId, setInstituteId] = useState('');
+    const [adminSecret, setAdminSecret] = useState('');
     const [error, setError] = useState('');
     const { register } = useAuth();
     const navigate = useNavigate();
@@ -18,7 +19,7 @@ const Register = () => {
         e.preventDefault();
         setError('');
         try {
-            await register(name, email, password, role, phone, instituteId);
+            await register(name, email, password, role, phone, instituteId, adminSecret);
             navigate('/');
         } catch (err) {
             setError(err.response?.data?.message || 'Failed to register');
@@ -34,6 +35,9 @@ const Register = () => {
                 <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900 dark:text-gray-100 transition-colors">
                     Create your account
                 </h2>
+                <p className="mt-2 text-center text-sm text-gray-600 dark:text-gray-400">
+                    Join our digital library today
+                </p>
             </div>
 
             <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
@@ -131,33 +135,55 @@ const Register = () => {
                             </div>
                         </div>
 
-                        <div>
-                            <label htmlFor="role" className="block text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors">
-                                Role
-                            </label>
-                            <div className="mt-1">
-                                <select
-                                    id="role"
-                                    name="role"
-                                    value={role}
-                                    onChange={(e) => setRole(e.target.value)}
-                                    className="block w-full px-3 py-2 border border-gray-300 dark:border-zinc-800 rounded-md shadow-sm bg-white dark:bg-zinc-900 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-brand-500 dark:focus:ring-brand-500 focus:border-brand-500 dark:focus:border-brand-500 sm:text-sm transition-all duration-200"
-                                >
-                                    <option value="reader">Reader / Student</option>
-                                    <option value="librarian">Librarian</option>
-                                    <option value="admin">Admin</option>
-                                    <option value="guest">Guest</option>
-                                </select>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label htmlFor="role" className="block text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors">
+                                    I am a...
+                                </label>
+                                <div className="mt-1">
+                                    <select
+                                        id="role"
+                                        name="role"
+                                        value={role}
+                                        onChange={(e) => {
+                                            setRole(e.target.value);
+                                            setError(''); // Clear error when switching
+                                        }}
+                                        className="block w-full px-3 py-2 border border-gray-300 dark:border-zinc-800 rounded-md shadow-sm bg-white dark:bg-zinc-900 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-brand-500 dark:focus:ring-brand-500 focus:border-brand-500 dark:focus:border-brand-500 sm:text-sm transition-all duration-200"
+                                    >
+                                        <option value="reader">Reader</option>
+                                        <option value="admin">Administrator (Restricted)</option>
+                                    </select>
+                                </div>
                             </div>
-                        </div>
 
+                            {role === 'admin' && (
+                                <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+                                    <label htmlFor="adminSecret" className="block text-sm font-bold text-brand-600 dark:text-brand-400 transition-colors">
+                                        Admin Access Secret Key
+                                    </label>
+                                    <div className="mt-1">
+                                        <input
+                                            id="adminSecret"
+                                            name="adminSecret"
+                                            type="password"
+                                            required={role === 'admin'}
+                                            placeholder="Enter secure key"
+                                            value={adminSecret}
+                                            onChange={(e) => setAdminSecret(e.target.value)}
+                                            className="appearance-none block w-full px-3 py-2 border-2 border-brand-500 dark:border-brand-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 bg-brand-50 dark:bg-brand-900/10 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-brand-500 focus:border-brand-500 sm:text-sm transition-all"
+                                        />
+                                    </div>
+                                </div>
+                            )}
+                        </div>
 
                         <div>
                             <button
                                 type="submit"
                                 className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-brand-600 dark:bg-brand-700 hover:bg-brand-700 dark:hover:bg-brand-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-500 transition-all duration-200 shadow-brand-500/20"
                             >
-                                Register
+                                {role === 'admin' ? 'Verify & Register as Admin' : 'Register Account'}
                             </button>
                         </div>
                     </form>

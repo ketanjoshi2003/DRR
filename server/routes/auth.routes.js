@@ -15,7 +15,7 @@ const generateToken = (id) => {
 // @route   POST /api/auth/register
 // @access  Public
 router.post('/register', async (req, res) => {
-    const { name, email, password, role, phone, instituteId } = req.body;
+    const { name, email, password, role, phone, instituteId, adminSecret } = req.body;
 
     try {
         const userExists = await User.findOne({ email });
@@ -24,11 +24,21 @@ router.post('/register', async (req, res) => {
             return res.status(400).json({ message: 'User already exists' });
         }
 
+        // Real-world security: Force 'reader' role unless a secret key is provided for admin
+        let assignedRole = 'reader';
+        if (role === 'admin') {
+            if (adminSecret === process.env.ADMIN_SECRET) {
+                assignedRole = 'admin';
+            } else {
+                return res.status(403).json({ message: 'Invalid Admin Secret Key. You can only register as a Reader.' });
+            }
+        }
+
         const user = await User.create({
             name,
             email,
             password,
-            role: role || 'reader',
+            role: assignedRole,
             phone,
             instituteId
         });

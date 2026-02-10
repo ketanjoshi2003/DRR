@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api/axios';
-import { Upload, BarChart, FileText, Users, Clock, AlertCircle, CheckCircle, Search, GraduationCap, BookOpen, Trash2, RotateCcw } from 'lucide-react';
+import { Upload, BarChart, FileText, Users, Clock, AlertCircle, CheckCircle, Search, GraduationCap, BookOpen, Trash2, RotateCcw, X } from 'lucide-react';
 
 import BulkUpload from './BulkUpload';
 
@@ -42,6 +42,11 @@ const AdminDashboard = ({ tab = 'upload' }) => {
     };
 
     const handleManageClick = async (type) => {
+        if (activeModal === type) {
+            setActiveModal(null);
+            return;
+        }
+
         setActiveModal(type);
         setLoadingManage(true);
         setManageData([]);
@@ -51,7 +56,7 @@ const AdminDashboard = ({ tab = 'upload' }) => {
             setManageData(data);
         } catch (error) {
             console.error(`Error fetching ${type}:`, error);
-            setMessage({ type: 'error', text: `Failed to load ${type}` });
+            // setMessage({ type: 'error', text: `Failed to load ${type}` });
         } finally {
             setLoadingManage(false);
         }
@@ -165,103 +170,108 @@ const AdminDashboard = ({ tab = 'upload' }) => {
                         </div>
                     </div>
 
-                    {/* Management Modal */}
+                    {/* Inline Management Section */}
                     {activeModal && (
-                        <div className="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-                            <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-                                <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" onClick={() => setActiveModal(null)}></div>
-                                <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-                                <div className="inline-block align-bottom bg-white dark:bg-zinc-900 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full border dark:border-zinc-800">
-                                    <div className="bg-white dark:bg-zinc-900 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                                        <div className="sm:flex sm:items-start pl-0">
-                                            <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
-                                                <h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-gray-100" id="modal-title">
-                                                    Manage {activeModal === 'users' ? 'Users' : 'PDFs'}
-                                                </h3>
-                                                <div className="mt-4 max-h-[60vh] overflow-y-auto">
-                                                    {loadingManage ? (
-                                                        <div className="text-center py-4 text-gray-500">Loading...</div>
-                                                    ) : (
-                                                        <table className="min-w-full divide-y divide-gray-200 dark:divide-zinc-800">
-                                                            <thead className="bg-gray-50 dark:bg-zinc-950">
-                                                                <tr>
-                                                                    {activeModal === 'users' ? (
-                                                                        <>
-                                                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Name</th>
-                                                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Email</th>
-                                                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Role</th>
-                                                                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Action</th>
-                                                                        </>
-                                                                    ) : (
-                                                                        <>
-                                                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Title/Author</th>
-                                                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Info</th>
-                                                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Uploaded</th>
-                                                                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
-                                                                        </>
-                                                                    )}
-                                                                </tr>
-                                                            </thead>
-                                                            <tbody className="bg-white dark:bg-zinc-900 divide-y divide-gray-200 dark:divide-zinc-800">
-                                                                {manageData.map((item) => (
-                                                                    <tr key={item._id} className="hover:bg-gray-50 dark:hover:bg-zinc-950 transition-colors">
-                                                                        {activeModal === 'users' ? (
-                                                                            <>
-                                                                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">{item.name}</td>
-                                                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{item.email}</td>
-                                                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                                                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${item.role === 'admin' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-400' : 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400'
-                                                                                        }`}>
-                                                                                        {item.role}
-                                                                                    </span>
-                                                                                </td>
-                                                                                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                                                                    <button onClick={() => handleDeleteItem(item._id, 'users')} className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300">
-                                                                                        <Trash2 className="w-4 h-4" />
-                                                                                    </button>
-                                                                                </td>
-                                                                            </>
-                                                                        ) : (
-                                                                            <>
-                                                                                <td className="px-6 py-4 text-sm font-medium text-gray-900 dark:text-gray-100 truncate max-w-xs">
-                                                                                    <div className="truncate" title={item.title}>{item.title}</div>
-                                                                                    {item.metadata?.author && <div className="text-xs text-gray-500 dark:text-gray-400 truncate">by {item.metadata.author}</div>}
-                                                                                </td>
-                                                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                                                                                    <div className="flex flex-col gap-1">
-                                                                                        <span>{(item.size / 1024 / 1024).toFixed(2)} MB</span>
-                                                                                        <div className="flex gap-1">
-                                                                                            {item.numPages > 0 && <span className="bg-gray-100 dark:bg-zinc-800 px-1.5 rounded text-xs">{item.numPages}p</span>}
-                                                                                            {item.isSearchable && <span className="bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-400 px-1.5 rounded text-xs">{item.ocrText ? 'OCR' : 'Text'}</span>}
-                                                                                        </div>
-                                                                                    </div>
-                                                                                </td>
-                                                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{new Date(item.createdAt).toLocaleDateString()}</td>
-                                                                                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                                                                    <button onClick={() => handleDeleteItem(item._id, 'pdfs')} className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300">
-                                                                                        <Trash2 className="w-4 h-4" />
-                                                                                    </button>
-                                                                                </td>
-                                                                            </>
-                                                                        )}
-                                                                    </tr>
-                                                                ))}
-                                                            </tbody>
-                                                        </table>
-                                                    )}
-                                                </div>
-                                            </div>
+                        <div className="mb-8 bg-white dark:bg-zinc-900 rounded-xl border border-gray-200 dark:border-zinc-800 shadow-sm overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                            <div className="px-6 py-4 border-b border-gray-100 dark:border-zinc-800 flex items-center justify-between bg-gray-50/50 dark:bg-zinc-900/50">
+                                <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                                    {activeModal === 'users' ? <Users className="w-5 h-5 text-blue-500" /> : <FileText className="w-5 h-5 text-brand-500" />}
+                                    Manage {activeModal === 'users' ? 'Users' : 'PDFs'}
+                                </h3>
+                                <button
+                                    onClick={() => setActiveModal(null)}
+                                    className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
+                                >
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
+
+                            <div className="p-0">
+                                <div className="max-h-[600px] overflow-y-auto custom-scrollbar">
+                                    {loadingManage ? (
+                                        <div className="flex flex-col items-center justify-center py-12 text-gray-500">
+                                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-500 mb-2"></div>
+                                            <p>Loading data...</p>
                                         </div>
-                                    </div>
-                                    <div className="bg-gray-50 dark:bg-zinc-800 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse border-t dark:border-zinc-700">
-                                        <button
-                                            type="button"
-                                            className="w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-zinc-700 shadow-sm px-4 py-2 bg-white dark:bg-zinc-900 text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm transition-colors"
-                                            onClick={() => setActiveModal(null)}
-                                        >
-                                            Close
-                                        </button>
-                                    </div>
+                                    ) : (
+                                        <table className="min-w-full divide-y divide-gray-200 dark:divide-zinc-800 text-left">
+                                            <thead className="bg-gray-50 dark:bg-zinc-950 sticky top-0 z-10">
+                                                <tr>
+                                                    {activeModal === 'users' ? (
+                                                        <>
+                                                            <th className="px-6 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Name</th>
+                                                            <th className="px-6 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Email</th>
+                                                            <th className="px-6 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Role</th>
+                                                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Action</th>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Title/Author</th>
+                                                            <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Info</th>
+                                                            <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Uploaded</th>
+                                                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                                                        </>
+                                                    )}
+                                                </tr>
+                                            </thead>
+                                            <tbody className="bg-white dark:bg-zinc-900 divide-y divide-gray-200 dark:divide-zinc-800">
+                                                {manageData.map((item) => (
+                                                    <tr key={item._id} className="hover:bg-gray-50 dark:hover:bg-zinc-950 transition-colors">
+                                                        {activeModal === 'users' ? (
+                                                            <>
+                                                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">{item.name}</td>
+                                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{item.email}</td>
+                                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                                    <span className={`px-2 py-0.5 inline-flex text-xs leading-5 font-bold rounded-full ${item.role === 'admin' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300' : 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
+                                                                        }`}>
+                                                                        {item.role}
+                                                                    </span>
+                                                                </td>
+                                                                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                                                    <button onClick={() => handleDeleteItem(item._id, 'users')} className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors">
+                                                                        <Trash2 className="w-4 h-4" />
+                                                                    </button>
+                                                                </td>
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <td className="px-6 py-4 text-sm font-medium text-gray-900 dark:text-gray-100">
+                                                                    <div className="flex flex-col max-w-xs">
+                                                                        <span className="truncate font-bold" title={item.title}>{item.title}</span>
+                                                                        {item.metadata?.author && <span className="text-xs text-gray-500 dark:text-gray-400 truncate">by {item.metadata.author}</span>}
+                                                                    </div>
+                                                                </td>
+                                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                                                                    <div className="flex items-center gap-2">
+                                                                        <span className="bg-gray-100 dark:bg-zinc-800 px-2 py-0.5 rounded text-xs font-mono">{(item.size / 1024 / 1024).toFixed(1)} MB</span>
+                                                                        {item.numPages > 0 && <span className="bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded text-xs">{item.numPages}p</span>}
+                                                                    </div>
+                                                                </td>
+                                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{new Date(item.createdAt).toLocaleDateString()}</td>
+                                                                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                                                    <button onClick={() => handleDeleteItem(item._id, 'pdfs')} className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors">
+                                                                        <Trash2 className="w-4 h-4" />
+                                                                    </button>
+                                                                </td>
+                                                            </>
+                                                        )}
+                                                    </tr>
+                                                ))}
+                                                {manageData.length === 0 && (
+                                                    <tr>
+                                                        <td colSpan="4" className="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
+                                                            <div className="flex flex-col items-center justify-center">
+                                                                <div className="p-3 bg-gray-100 dark:bg-zinc-800 rounded-full mb-3">
+                                                                    {activeModal === 'users' ? <Users className="w-6 h-6 text-gray-400" /> : <FileText className="w-6 h-6 text-gray-400" />}
+                                                                </div>
+                                                                <p>No {activeModal === 'users' ? 'users' : 'PDFs'} found</p>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                )}
+                                            </tbody>
+                                        </table>
+                                    )}
                                 </div>
                             </div>
                         </div>
