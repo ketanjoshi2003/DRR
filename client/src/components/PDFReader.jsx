@@ -7,6 +7,7 @@ import { ChevronLeft, ChevronRight, Maximize, Minimize, MessageSquare, Plus, X, 
 import MetadataModal from './MetadataModal';
 import 'react-pdf/dist/Page/TextLayer.css';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
+import { usePreventDownload } from '../hooks/usePreventDownload';
 
 // Configure PDF.js worker
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
@@ -61,6 +62,7 @@ const PageContent = memo(({ pageNumber, scale, notes, selection }) => {
 });
 
 const PDFReader = () => {
+    usePreventDownload();
     const { id } = useParams();
     const navigate = useNavigate();
     const { isAdmin, user, isDarkMode, toggleTheme } = useAuth();
@@ -550,7 +552,7 @@ const PDFReader = () => {
 
                 <div
                     className={`flex-1 w-full flex justify-center p-4 md:p-8 overflow-visible ${isDarkMode ? 'invert brightness-90 hue-rotate-180' : ''}`}
-                    onContextMenu={(e) => pdfMeta?.accessControl?.viewOnly ? e.preventDefault() : null}
+                    onContextMenu={(e) => e.preventDefault()}
                 >
                     {loading && (
                         <div className="absolute inset-0 flex flex-col items-center justify-center z-20 bg-white/80 backdrop-blur-sm">

@@ -8,8 +8,10 @@ import {
     ZoomIn, ZoomOut, Sun, Moon, Info
 } from 'lucide-react';
 import MetadataModal from './MetadataModal';
+import { usePreventDownload } from '../hooks/usePreventDownload';
 
 const DocViewer = () => {
+    usePreventDownload();
     const { id } = useParams();
     const navigate = useNavigate();
     const { isDarkMode, toggleTheme } = useAuth();
@@ -150,25 +152,7 @@ const DocViewer = () => {
         }
     };
 
-    const handleDownload = async () => {
-        if (!meta) return;
-        try {
-            const response = await api.get(`/pdfs/${id}/stream?download=true`, {
-                responseType: 'blob',
-            });
-            const url = window.URL.createObjectURL(new Blob([response.data]));
-            const link = document.createElement('a');
-            link.href = url;
-            link.setAttribute('download', meta.originalName || meta.title);
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
-            window.URL.revokeObjectURL(url);
-        } catch (error) {
-            console.error('Download failed:', error);
-            alert('Failed to download file');
-        }
-    };
+
 
     return (
         <div ref={rootRef} className={`flex flex-col h-screen overflow-hidden transition-colors duration-200 ease-in-out bg-gray-100 dark:bg-black text-gray-900 dark:text-gray-100 ${isFullScreen ? 'fixed inset-0 z-50' : ''}`}>
@@ -235,13 +219,7 @@ const DocViewer = () => {
                                 <Info className="w-5 h-5" />
                             </button>
 
-                            <button
-                                onClick={handleDownload}
-                                className="p-2 rounded-md text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-zinc-800 hover:text-brand-600 dark:hover:text-brand-400 transition-colors"
-                                title="Download"
-                            >
-                                <Download className="w-5 h-5" />
-                            </button>
+
 
                             <button
                                 className="p-2 rounded-md text-gray-400 dark:text-gray-500 hover:bg-gray-50 dark:hover:bg-zinc-800 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
@@ -278,12 +256,7 @@ const DocViewer = () => {
                                     <AlertCircle className="w-12 h-12 text-red-500" />
                                     <h3 className="text-lg font-medium text-gray-900">Unable to View Document</h3>
                                     <p className="text-sm text-gray-500">{error}</p>
-                                    <button
-                                        onClick={handleDownload}
-                                        className="mt-4 px-4 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700 transition-colors shadow-sm"
-                                    >
-                                        Download Instead
-                                    </button>
+
                                 </div>
                             </div>
                         )}

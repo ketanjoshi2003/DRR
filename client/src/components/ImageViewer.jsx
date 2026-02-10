@@ -3,8 +3,10 @@ import { useParams, useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 import { ChevronLeft, Maximize, Minimize, Info, ZoomIn, ZoomOut, Download, X } from 'lucide-react';
 import MetadataModal from './MetadataModal';
+import { usePreventDownload } from '../hooks/usePreventDownload';
 
 const ImageViewer = () => {
+    usePreventDownload();
     const { id } = useParams();
     const navigate = useNavigate();
     const [pdfMeta, setPdfMeta] = useState(null);
@@ -119,15 +121,7 @@ const ImageViewer = () => {
         };
     }, [id]);
 
-    const handleDownload = () => {
-        if (!imageUrl || !pdfMeta) return;
-        const link = document.createElement('a');
-        link.href = imageUrl;
-        link.download = pdfMeta.originalName || 'image.png';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    };
+
 
     if (loading) return (
         <div className="flex flex-col items-center justify-center h-screen bg-gray-50">
@@ -205,13 +199,7 @@ const ImageViewer = () => {
                         <Info className="w-5 h-5" />
                     </button>
 
-                    <button
-                        onClick={handleDownload}
-                        className={`p-2 rounded-lg transition-colors ${isFullScreen ? 'text-white hover:bg-white/10' : 'text-gray-600 hover:bg-gray-100'}`}
-                        title="Download"
-                    >
-                        <Download className="w-5 h-5" />
-                    </button>
+
                 </div>
             </div>
 
