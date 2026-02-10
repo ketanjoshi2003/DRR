@@ -132,40 +132,40 @@ const AdminDashboard = ({ tab = 'upload' }) => {
                         </div>
                         <div
                             onClick={() => navigate('/courses')}
-                            className="bg-white dark:bg-zinc-900 p-6 rounded-xl border border-gray-200 dark:border-zinc-800 shadow-sm flex items-center justify-between relative overflow-hidden cursor-pointer hover:shadow-md dark:hover:shadow-indigo-500/10 transition-all group"
+                            className="bg-white dark:bg-zinc-900 p-6 rounded-xl border border-gray-200 dark:border-zinc-800 shadow-sm flex items-center justify-between relative overflow-hidden cursor-pointer hover:shadow-md dark:hover:shadow-blue-500/10 transition-all group"
                         >
 
                             <div>
-                                <p className="text-sm font-medium text-gray-500 dark:text-gray-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">Active Courses</p>
+                                <p className="text-sm font-medium text-gray-500 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">Active Courses</p>
                                 <p className="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-1">{overviewStats.courses}</p>
                             </div>
-                            <div className="p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg group-hover:bg-indigo-100 dark:group-hover:bg-indigo-900/40 transition-colors">
-                                <GraduationCap className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
+                            <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg group-hover:bg-blue-100 dark:group-hover:bg-blue-900/40 transition-colors">
+                                <GraduationCap className="w-6 h-6 text-blue-600 dark:text-blue-400" />
                             </div>
                         </div>
                         <div
                             onClick={() => navigate('/subjects')}
-                            className="bg-white dark:bg-zinc-900 p-6 rounded-xl border border-gray-200 dark:border-zinc-800 shadow-sm flex items-center justify-between relative overflow-hidden cursor-pointer hover:shadow-md dark:hover:shadow-indigo-500/10 transition-all group"
+                            className="bg-white dark:bg-zinc-900 p-6 rounded-xl border border-gray-200 dark:border-zinc-800 shadow-sm flex items-center justify-between relative overflow-hidden cursor-pointer hover:shadow-md dark:hover:shadow-blue-500/10 transition-all group"
                         >
 
                             <div>
-                                <p className="text-sm font-medium text-gray-500 dark:text-gray-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">Total Subjects</p>
+                                <p className="text-sm font-medium text-gray-500 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">Total Subjects</p>
                                 <p className="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-1">{overviewStats.subjects}</p>
                             </div>
-                            <div className="p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg group-hover:bg-indigo-100 dark:group-hover:bg-indigo-900/40 transition-colors">
-                                <BookOpen className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
+                            <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg group-hover:bg-blue-100 dark:group-hover:bg-blue-900/40 transition-colors">
+                                <BookOpen className="w-6 h-6 text-blue-600 dark:text-blue-400" />
                             </div>
                         </div>
                         <div
                             onClick={() => handleManageClick('pdfs')}
-                            className="bg-white dark:bg-zinc-900 p-6 rounded-xl border border-gray-200 dark:border-zinc-800 shadow-sm flex items-center justify-between cursor-pointer hover:shadow-md dark:hover:shadow-brand-500/10 transition-all group"
+                            className="bg-white dark:bg-zinc-900 p-6 rounded-xl border border-gray-200 dark:border-zinc-800 shadow-sm flex items-center justify-between cursor-pointer hover:shadow-md dark:hover:shadow-blue-500/10 transition-all group"
                         >
                             <div>
-                                <p className="text-sm font-medium text-gray-500 dark:text-gray-400 group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors">PDF Documents</p>
+                                <p className="text-sm font-medium text-gray-500 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">PDF Documents</p>
                                 <p className="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-1">{overviewStats.pdfs}</p>
                             </div>
-                            <div className="p-3 bg-brand-50 dark:bg-brand-900/20 rounded-lg group-hover:bg-brand-100 dark:group-hover:bg-brand-900/40 transition-colors">
-                                <FileText className="w-6 h-6 text-brand-600 dark:text-brand-400" />
+                            <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg group-hover:bg-blue-100 dark:group-hover:bg-blue-900/40 transition-colors">
+                                <FileText className="w-6 h-6 text-blue-600 dark:text-blue-400" />
                             </div>
                         </div>
                     </div>
