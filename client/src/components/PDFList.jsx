@@ -1,10 +1,15 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import api from '../api/axios';
-import { FileText, Clock, Trash2, Search, Download, Bookmark, Image as ImageIcon, Film, FileAudio, File } from 'lucide-react';
+import { FileText, Clock, Trash2, Search, Download, Bookmark, Image as ImageIcon, Film, FileAudio, File, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const PDFList = () => {
+    const navigate = useNavigate();
+    const location = useLocation();
+    const queryParams = new URLSearchParams(location.search);
+    const subjectParam = queryParams.get('subjectCode');
+
     const getFileIcon = (type, name) => {
         let t = type;
         const ext = name?.toLowerCase() || '';
@@ -118,13 +123,14 @@ const PDFList = () => {
     };
 
     const filteredPdfs = pdfs.filter(pdf => {
+        const matchesSubject = !subjectParam || pdf.subjectCode === subjectParam;
         const matchesSearch =
             (pdf.title?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
             (pdf.metadata?.author?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
             (pdf.metadata?.subject?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
             (pdf.metadata?.keywords?.toLowerCase() || '').includes(searchQuery.toLowerCase());
 
-        return matchesSearch;
+        return matchesSubject && matchesSearch;
     });
 
     const handleSelectAll = () => {
@@ -147,6 +153,20 @@ const PDFList = () => {
             <div className="flex flex-col gap-4 mb-4">
                 <div className="flex items-center justify-between">
                     <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 tracking-tight">Digital Library</h1>
+                    {subjectParam && (
+                        <div className="flex items-center gap-3 bg-brand-50/50 dark:bg-brand-950/30 px-3 py-1.5 rounded-xl border border-brand-100 dark:border-brand-900/50">
+                            <span className="text-xs font-medium text-brand-700 dark:text-brand-400">
+                                Subject: <span className="font-bold">{subjectParam}</span>
+                            </span>
+                            <button
+                                onClick={() => navigate('/')}
+                                className="p-1 hover:bg-brand-100 dark:hover:bg-brand-900/50 rounded-lg transition-colors text-brand-600 dark:text-brand-400"
+                                title="Clear filter"
+                            >
+                                <X className="w-3.5 h-3.5" />
+                            </button>
+                        </div>
+                    )}
                 </div>
 
                 <div className="flex flex-col md:flex-row gap-3 items-center w-full">

@@ -1,11 +1,12 @@
 import { useEffect, useState, useRef } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Book, Plus, Upload, Trash2, Filter, Search, Bookmark } from 'lucide-react';
 import CustomSelect from './CustomSelect';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 
 const SubjectList = () => {
+    const navigate = useNavigate();
     const [subjects, setSubjects] = useState([]);
     const [courses, setCourses] = useState([]);
     const [semesters, setSemesters] = useState([]);
@@ -324,11 +325,17 @@ const SubjectList = () => {
                             {subjectsBySemester[semName].map((subject) => (
                                 <div
                                     key={subject._id}
-                                    className={`bg-white dark:bg-zinc-900 rounded-xl border p-5 transition-all duration-150 transform-gpu relative overflow-hidden group ${isDeleteMode
-                                        ? 'cursor-pointer hover:bg-red-50 dark:hover:bg-red-900/10 border-red-200 dark:border-red-900/50'
+                                    className={`bg-white dark:bg-zinc-900 rounded-xl border p-5 transition-all duration-150 transform-gpu relative overflow-hidden group cursor-pointer ${isDeleteMode
+                                        ? 'hover:bg-red-50 dark:hover:bg-red-900/10 border-red-200 dark:border-red-900/50'
                                         : 'border-gray-200 dark:border-zinc-800 hover:border-brand-300 dark:hover:border-brand-700 hover:shadow-lg dark:hover:shadow-brand-500/10 hover:-translate-y-1'
                                         } ${selectedIds.includes(subject._id) ? 'ring-2 ring-red-500 bg-red-50 dark:bg-red-900/20' : ''}`}
-                                    onClick={() => isDeleteMode && toggleSelection(subject._id)}
+                                    onClick={() => {
+                                        if (isDeleteMode) {
+                                            toggleSelection(subject._id);
+                                        } else {
+                                            navigate(`/?subjectCode=${subject.code}`);
+                                        }
+                                    }}
                                 >
                                     <div className="absolute top-0 right-0 p-2 opacity-5 dark:opacity-10 text-gray-900 dark:text-gray-100">
                                         <Book className="w-24 h-24" />
