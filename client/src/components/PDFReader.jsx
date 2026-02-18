@@ -15,49 +15,194 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL(
     import.meta.url,
 ).toString();
 
-// Memoized Page Component
+// Memoized Page Component — uses DOM-based highlighting after render
 const PageContent = memo(({ pageNumber, scale, notes, selection }) => {
-    const textRenderer = useCallback(({ str }) => {
-        if (!str) return str;
+    const pageContainerRef = useRef(null);
 
-        // Helper for fuzzy matching
-        const clean = (s) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
-        const fuzzy = (s) => clean(s).replace(/[l1]/g, 'i');
-        const strFuzzy = fuzzy(str);
+    // Apply highlights directly on the text layer DOM after render
+    const applyHighlights = useCallback(() => {
+        if (!pageContainerRef.current) return;
 
-        if (strFuzzy.length === 0) return str;
+        const textLayer = pageContainerRef.current.querySelector('.react-pdf__Page__textContent');
+        if (!textLayer) return;
 
-        // Check saved notes
-        const isNote = notes.some(n => {
-            if (n.pageNumber !== pageNumber) return false;
-            const noteFuzzy = fuzzy(n.selectedText);
-            return (noteFuzzy.includes(strFuzzy) || strFuzzy.includes(noteFuzzy));
+        // Remove existing highlights first
+        const existingMarks = textLayer.querySelectorAll('mark[data-pdf-highlight]');
+        existingMarks.forEach(mark => {
+            const parent = mark.parentNode;
+            const textNode = document.createTextNode(mark.textContent);
+            parent.replaceChild(textNode, mark);
+            parent.normalize();
         });
 
-        // Check temporary selection
-        const isSelected = selection && selection.page === pageNumber && (fuzzy(selection.text).includes(strFuzzy) || strFuzzy.includes(fuzzy(selection.text)));
+        // Collect all relevant texts to highlight on this page
+        const highlights = [];
 
-        if (isNote || isSelected) {
-            return (
-                <mark className={`${isSelected ? 'bg-purple-300/50' : 'bg-yellow-500/40'} text-transparent rounded-[2px]`} title={isNote ? "Note available" : "New selection"}>
-                    {str}
-                </mark>
-            );
+        // Add saved notes for this page
+        notes.forEach(note => {
+            if (note.pageNumber !== pageNumber) return;
+            if (!note.selectedText || note.selectedText.trim().length === 0) return;
+            highlights.push({
+                text: note.selectedText,
+                type: 'note',
+                title: note.noteContent || 'Note',
+                id: note._id
+            });
+        });
+
+        // Add temporary selection
+        if (selection && selection.page === pageNumber && selection.text.trim().length > 0) {
+            highlights.push({
+                text: selection.text,
+                type: 'selection',
+                title: 'New selection',
+                id: 'selection'
+            });
         }
-        return str;
+
+        if (highlights.length === 0) return;
+
+        // Walk all text nodes in the text layer
+        const treeWalker = document.createTreeWalker(
+            textLayer,
+            NodeFilter.SHOW_TEXT,
+            null,
+            false
+        );
+
+        const textNodes = [];
+        let node;
+        while ((node = treeWalker.nextNode())) {
+            if (node.textContent.length > 0) {
+                textNodes.push(node);
+            }
+        }
+
+        // Build a full text string with node mapping
+        let fullText = '';
+        const nodeMap = [];
+        textNodes.forEach(tn => {
+            const start = fullText.length;
+            fullText += tn.textContent;
+            nodeMap.push({ node: tn, start, end: fullText.length });
+        });
+
+        const fullTextLower = fullText.toLowerCase();
+
+        // For each highlight, find and wrap matches
+        highlights.forEach(hl => {
+            const searchLower = hl.text.toLowerCase().trim();
+            if (searchLower.length === 0) return;
+
+            // Try exact substring match first
+            const foundIndex = fullTextLower.indexOf(searchLower);
+            if (foundIndex === -1) return;
+
+            const matchStart = foundIndex;
+            const matchEnd = foundIndex + searchLower.length;
+
+            // Find which text nodes this match spans
+            for (let i = 0; i < nodeMap.length; i++) {
+                const nm = nodeMap[i];
+                if (nm.end <= matchStart) continue;
+                if (nm.start >= matchEnd) break;
+
+                const textNode = nm.node;
+                if (!textNode.parentNode) continue;
+
+                const nodeStart = nm.start;
+                const nodeEnd = nm.end;
+
+                const overlapStart = Math.max(matchStart, nodeStart) - nodeStart;
+                const overlapEnd = Math.min(matchEnd, nodeEnd) - nodeStart;
+                if (overlapStart >= overlapEnd) continue;
+
+                const nodeText = textNode.textContent;
+                const before = nodeText.substring(0, overlapStart);
+                const matched = nodeText.substring(overlapStart, overlapEnd);
+                const after = nodeText.substring(overlapEnd);
+
+                const frag = document.createDocumentFragment();
+
+                if (before) {
+                    frag.appendChild(document.createTextNode(before));
+                }
+
+                const mark = document.createElement('mark');
+                mark.setAttribute('data-pdf-highlight', 'true');
+                mark.setAttribute('data-highlight-id', hl.id);
+                mark.style.backgroundColor = hl.type === 'selection'
+                    ? 'rgba(168, 85, 247, 0.35)'
+                    : 'rgba(250, 204, 21, 0.4)';
+                mark.style.color = 'inherit';
+                mark.style.borderRadius = '2px';
+                mark.style.padding = '0';
+                mark.style.cursor = 'pointer';
+                mark.title = hl.title;
+                mark.textContent = matched;
+                frag.appendChild(mark);
+
+                if (after) {
+                    frag.appendChild(document.createTextNode(after));
+                }
+
+                textNode.parentNode.replaceChild(frag, textNode);
+
+                // Update nodeMap for subsequent highlights
+                const newEntries = [];
+                if (before) {
+                    newEntries.push({
+                        node: frag.firstChild,
+                        start: nodeStart,
+                        end: nodeStart + before.length
+                    });
+                }
+                newEntries.push({
+                    node: mark.firstChild,
+                    start: nodeStart + overlapStart,
+                    end: nodeStart + overlapEnd
+                });
+                if (after) {
+                    newEntries.push({
+                        node: frag.lastChild,
+                        start: nodeStart + overlapEnd,
+                        end: nodeEnd
+                    });
+                }
+                nodeMap.splice(i, 1, ...newEntries);
+            }
+        });
     }, [notes, pageNumber, selection]);
 
+    // Re-apply highlights when notes/selection change
+    useEffect(() => {
+        // Small delay to ensure text layer is fully rendered
+        const timer = setTimeout(() => {
+            applyHighlights();
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [applyHighlights]);
+
+    const handleRenderSuccess = useCallback(() => {
+        // Apply highlights after text layer renders
+        setTimeout(() => {
+            applyHighlights();
+        }, 200);
+    }, [applyHighlights]);
+
     return (
-        <Page
-            key={`page_${pageNumber}_${notes.length}`}
-            pageNumber={pageNumber}
-            scale={scale}
-            renderTextLayer={true}
-            renderAnnotationLayer={true}
-            className="bg-white shadow-sm"
-            loading={<div className="h-[800px] w-full bg-white animate-pulse" />}
-            customTextRenderer={textRenderer}
-        />
+        <div ref={pageContainerRef}>
+            <Page
+                key={`page_${pageNumber}`}
+                pageNumber={pageNumber}
+                scale={scale}
+                renderTextLayer={true}
+                renderAnnotationLayer={true}
+                className="bg-white shadow-sm"
+                loading={<div className="h-[800px] w-full bg-white animate-pulse" />}
+                onRenderTextLayerSuccess={handleRenderSuccess}
+            />
+        </div>
     );
 });
 

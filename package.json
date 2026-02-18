@@ -1,0 +1,16 @@
+{
+    "name": "drr-root",
+    "version": "1.0.0",
+    "description": "Root package for DRR project",
+    "scripts": {
+        "start:server": "cd server && npm start",
+        "start:client": "cd client && npm run dev",
+        "dev:server": "cd server && npm run dev",
+        "dev:client": "cd client && npm run dev",
+        "dev": "npx concurrently \"npm run dev:server\" \"npm run dev:client\"",
+        "install:all": "npm install && cd server && npm install && cd ../client && npm install"
+    },
+    "devDependencies": {
+        "concurrently": "^8.2.2"
+    }
+}

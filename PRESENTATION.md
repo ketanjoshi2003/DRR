@@ -82,6 +82,44 @@ This testing ensures the system meets the user's needs and that the data is hand
 ![Form Validation](./screenshots/form_validation.png)
 *Figure 5.1.2: Form Validation Error Messages*
 
+## 5.1.3 Automated Unit Testing
+To ensure the reliability of core logic, we implemented automated unit testing using the **Jest** framework. This allows us to verify individual functions in isolation before deploying the system.
+
+### Test Case: Validator Utility
+We tested the `validator.js` utility, which handles critical input checks for emails, password strength, and admin security keys.
+
+**Test Snippet:**
+```javascript
+describe('Validator Utility Unit Tests', () => {
+    test('should validate correct emails', () => {
+        expect(validateEmail('test@example.com')).toBe(true);
+    });
+
+    test('should reject short passwords', () => {
+        expect(validatePasswordStrength('123')).toBe(false);
+    });
+});
+```
+
+**Test Execution Result:**
+The following output demonstrates that all unit tests passed successfully, confirming the correctness of our validation registry.
+
+```bash
+> jest
+ PASS  tests/validator.test.js
+  Validator Utility Unit Tests
+    ✓ should validate correct emails (2 ms)
+    ✓ should reject invalid emails (1 ms)
+    ✓ should validate password length (min 6)
+    ✓ should reject short passwords
+    ✓ should validate admin secret key correctly
+
+Test Suites: 1 passed, 1 total
+Tests:       5 passed, 5 total
+Snapshots:   0 total
+Time:        2.07 s
+```
+
 ---
 
 # Chapter-6 Conclusion & Future Enhancement
