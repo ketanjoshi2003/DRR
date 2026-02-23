@@ -69,7 +69,7 @@ const CustomSelect = ({
                         <Icon className={`w-3.5 h-3.5 ${isOpen ? 'text-brand-600 dark:text-brand-400' : 'text-gray-400 dark:text-zinc-500'}`} />
                     </div>
                 )}
-                <span className={`block truncate flex-1 font-semibold ${selectedOption ? 'text-gray-900 dark:text-gray-100' : 'text-gray-400 dark:text-zinc-500 font-medium'}`}>
+                <span className={`block flex-1 font-semibold break-words ${selectedOption ? 'text-gray-900 dark:text-gray-100' : 'text-gray-400 dark:text-zinc-500 font-medium'}`}>
                     {selectedOption ? selectedOption.label : placeholder}
                 </span>
                 <ChevronDown className={`w-3.5 h-3.5 text-gray-400 dark:text-zinc-600 transition-transform duration-300 ${isOpen ? 'rotate-180 text-brand-500' : ''}`} />
@@ -127,7 +127,7 @@ const CustomSelect = ({
                                         }
                                     `}
                                 >
-                                    <span className={`block truncate ${option.value === value ? 'font-bold' : 'font-semibold group-hover:translate-x-1 transition-transform'}`}>
+                                    <span className={`block break-words ${option.value === value ? 'font-bold' : 'font-semibold group-hover:translate-x-1 transition-transform'}`}>
                                         {option.label}
                                     </span>
                                     {option.value === value && (

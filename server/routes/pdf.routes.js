@@ -414,6 +414,40 @@ router.delete('/:id', protect, authorize('admin'), async (req, res) => {
     }
 });
 
+// @desc    Bulk assign course/subject to multiple PDFs
+// @route   PUT /api/pdfs/bulk-assign
+// @access  Admin
+router.put('/bulk-assign', protect, authorize('admin'), async (req, res) => {
+    try {
+        const { ids, courseCode, subjectCode } = req.body;
+
+        if (!ids || !Array.isArray(ids) || ids.length === 0) {
+            return res.status(400).json({ message: 'No PDF IDs provided' });
+        }
+
+        const updateFields = {};
+        if (courseCode !== undefined) updateFields.courseCode = courseCode;
+        if (subjectCode !== undefined) updateFields.subjectCode = subjectCode;
+
+        if (Object.keys(updateFields).length === 0) {
+            return res.status(400).json({ message: 'No assignment fields provided' });
+        }
+
+        const result = await Pdf.updateMany(
+            { _id: { $in: ids } },
+            { $set: updateFields }
+        );
+
+        res.json({
+            message: `Successfully assigned ${result.modifiedCount} materials`,
+            modifiedCount: result.modifiedCount
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server Error', error: error.message });
+    }
+});
+
 // @desc    Update PDF metadata
 // @route   PUT /api/pdfs/:id
 // @access  Admin
