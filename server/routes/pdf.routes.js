@@ -481,4 +481,77 @@ router.put('/:id', protect, authorize('admin', 'teacher'), async (req, res) => {
     }
 });
 
+const csv = require('csv-parser');
+
+// @desc    Upload CSV to map Materials to Courses/Subjects
+// @route   POST /api/pdfs/upload-csv
+// @access  Admin
+router.post('/upload-csv', protect, authorize('admin', 'teacher'), upload.single('file'), async (req, res) => {
+    if (!req.file) {
+        return res.status(400).json({ message: 'No file uploaded' });
+    }
+
+    const results = [];
+    fs.createReadStream(req.file.path)
+        .pipe(csv())
+        .on('data', (data) => {
+            const normalized = {};
+            Object.keys(data).forEach(key => {
+                normalized[key.toLowerCase()] = data[key];
+            });
+            // filename is required, plus at least one field to update
+            if (normalized.filename) {
+                results.push(normalized);
+            }
+        })
+        .on('end', async () => {
+            fs.unlinkSync(req.file.path);
+
+            if (results.length === 0) {
+                return res.status(400).json({ message: 'No valid data found in CSV. Header "filename" is required.' });
+            }
+
+            try {
+                const bulkOps = results.map(row => {
+                    const update = {};
+                    if (row.title) update.title = row.title;
+                    if (row.coursecode) update.courseCode = row.coursecode;
+                    if (row.subjectcode) update.subjectCode = row.subjectcode;
+                    if (row.type) update.type = row.type;
+
+                    // Metadata updates
+                    const metadata = {};
+                    if (row.author) metadata.author = row.author;
+                    if (row.year) metadata.year = parseInt(row.year);
+                    if (row.language) metadata.language = row.language;
+
+                    if (Object.keys(metadata).length > 0) {
+                        update.metadata = metadata;
+                    }
+
+                    return {
+                        updateMany: {
+                            filter: { originalName: row.filename },
+                            update: { $set: update }
+                        }
+                    };
+                });
+
+                const result = await Pdf.bulkWrite(bulkOps);
+                res.json({
+                    message: 'Materials CSV processing completed',
+                    matched: result.matchedCount,
+                    modified: result.modifiedCount
+                });
+            } catch (error) {
+                console.error('Bulk write error:', error);
+                res.status(500).json({ message: 'Error processing materials CSV', error: error.message });
+            }
+        })
+        .on('error', (error) => {
+            if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+            res.status(500).json({ message: 'Error parsing CSV', error: error.message });
+        });
+});
+
 module.exports = router;

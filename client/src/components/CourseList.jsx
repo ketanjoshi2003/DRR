@@ -1,17 +1,16 @@
 import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Book, Upload, Trash2, Search, Bookmark } from 'lucide-react';
+import { Plus, Book, Upload, Trash2, Search, Bookmark, ChevronDown, ChevronUp, Calendar, X } from 'lucide-react';
 import CustomSelect from './CustomSelect';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 
 const CourseList = () => {
     const [courses, setCourses] = useState([]);
-    const [semesters, setSemesters] = useState([]);
+    const [semesters, setSemesters] = useState([]);  // all semesters
     const [loading, setLoading] = useState(true);
-    const [selectedSemesters, setSelectedSemesters] = useState({}); // { courseId: semesterId }
     const [showAddModal, setShowAddModal] = useState(false);
-    const [newCourse, setNewCourse] = useState({ name: '', code: '', description: '' });
+    const [newCourse, setNewCourse] = useState({ name: '', code: '', description: '', semesterCount: '' });
     const { user } = useAuth();
     const navigate = useNavigate();
     const fileInputRef = useRef(null);
@@ -21,6 +20,13 @@ const CourseList = () => {
     const [selectedIds, setSelectedIds] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');
     const [userCollection, setUserCollection] = useState({ courses: [], subjects: [], pdfs: [] });
+
+    // Inline semester management per course
+    const [expandedCourse, setExpandedCourse] = useState(null);
+    const [selectedSemesters, setSelectedSemesters] = useState({}); // { courseId: semId }
+    const [showAddSemModal, setShowAddSemModal] = useState(null); // courseId
+    const [newSem, setNewSem] = useState({ name: '', code: '', description: '' });
+    const [deletingSemId, setDeletingSemId] = useState(null);
 
     const fetchUserCollection = async () => {
         try {
@@ -35,6 +41,18 @@ const CourseList = () => {
         fetchData();
         fetchUserCollection();
     }, []);
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (isDeleteMode || !expandedCourse) return;
+            if (!event.target.closest('.course-card-container')) {
+                setExpandedCourse(null);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [expandedCourse, isDeleteMode]);
 
     const toggleCollectionItem = async (type, id) => {
         const isCollected = userCollection[type]?.some(item => (item._id || item) === id);
@@ -65,18 +83,71 @@ const CourseList = () => {
         }
     };
 
+    const handleAddSemester = async (e, courseId) => {
+        e.preventDefault();
+        try {
+            await api.post('/semesters', { ...newSem, courseId });
+            setShowAddSemModal(null);
+            setNewSem({ name: '', code: '', description: '' });
+            fetchData();
+        } catch (error) {
+            console.error('Error adding semester:', error);
+            alert('Failed to add semester');
+        }
+    };
+
+    const handleDeleteSemester = async (semId) => {
+        if (!window.confirm('Delete this semester?')) return;
+        setDeletingSemId(semId);
+        try {
+            await api.delete('/semesters', { data: { ids: [semId] } });
+            fetchData();
+        } catch (error) {
+            console.error('Error deleting semester:', error);
+            alert('Failed to delete semester');
+        } finally {
+            setDeletingSemId(null);
+        }
+    };
+
+    const handleCourseClick = (courseId) => {
+        if (isDeleteMode) return;
+        setExpandedCourse(prev => prev === courseId ? null : courseId);
+    };
+
     const handleAddCourse = async (e) => {
         e.preventDefault();
         try {
-            await api.post('/courses', newCourse);
+            const { data: savedCourse } = await api.post('/courses', {
+                name: newCourse.name,
+                code: newCourse.code,
+                description: newCourse.description
+            });
+
+            // Auto-generate semesters based on count
+            const count = parseInt(newCourse.semesterCount);
+            if (!isNaN(count) && count > 0) {
+                const semesterPromises = [];
+                for (let i = 1; i <= count; i++) {
+                    semesterPromises.push(api.post('/semesters', {
+                        name: `Semester ${i}`,
+                        code: `SEM${i}`,
+                        courseId: savedCourse._id
+                    }));
+                }
+                await Promise.all(semesterPromises);
+            }
+
             setShowAddModal(false);
-            setNewCourse({ name: '', code: '', description: '' });
+            setNewCourse({ name: '', code: '', description: '', semesterCount: '' });
             fetchData();
         } catch (error) {
             console.error('Error adding course:', error);
             alert('Failed to add course');
         }
     };
+
+
 
     const handleDeleteSelected = async () => {
         if (selectedIds.length === 0) return;
@@ -144,19 +215,10 @@ const CourseList = () => {
         }
     };
 
-    const handleSemesterChange = (courseId, semesterId) => {
-        setSelectedSemesters(prev => ({
-            ...prev,
-            [courseId]: semesterId
-        }));
-    };
-
     const handleViewSubjects = (courseId) => {
-        const semesterId = selectedSemesters[courseId];
+        const semId = selectedSemesters[courseId];
         let url = `/subjects?courseId=${courseId}`;
-        if (semesterId && semesterId !== 'all') {
-            url += `&semesterId=${semesterId}`;
-        }
+        if (semId) url += `&semesterId=${semId}`;
         navigate(url);
     };
 
@@ -258,20 +320,24 @@ const CourseList = () => {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
                 {filteredCourses.map((course) => {
                     const courseSemesters = semesters.filter(s => s.course?._id === course._id);
+                    const isExpanded = expandedCourse === course._id;
+                    const selectedSemId = selectedSemesters[course._id];
+                    const selectedSem = courseSemesters.find(s => s._id === selectedSemId);
 
                     return (
                         <div
                             key={course._id}
-                            className={`bg-white dark:bg-zinc-950 rounded-xl border p-6 transition-all duration-150 transform-gpu flex flex-col h-full ${isDeleteMode
+                            className={`course-card-container bg-white dark:bg-zinc-900 rounded-xl border transition-all duration-200 flex flex-col overflow-hidden ${isDeleteMode
                                 ? 'cursor-pointer hover:bg-red-50 dark:hover:bg-red-900/10 border-red-200 dark:border-red-900/50'
-                                : 'border-gray-200 dark:border-zinc-800 hover:border-brand-300 dark:hover:border-brand-700 hover:shadow-lg dark:hover:shadow-brand-500/10 hover:-translate-y-1'
+                                : 'border-gray-200 dark:border-zinc-800 hover:border-brand-300 dark:hover:border-brand-700 hover:shadow-lg dark:hover:shadow-brand-500/10'
                                 } ${selectedIds.includes(course._id) ? 'ring-2 ring-red-500 bg-red-50 dark:bg-red-900/20' : ''}`}
                             onClick={() => isDeleteMode && toggleSelection(course._id)}
                         >
-                            <div className="flex-1">
+                            {/* Card Top */}
+                            <div className="p-6 flex flex-col flex-1">
                                 <div className="flex items-start justify-between mb-4">
                                     <div className="p-3 bg-brand-50 dark:bg-brand-900/40 rounded-lg">
                                         <Book className="w-8 h-8 text-brand-600 dark:text-brand-400" />
@@ -279,14 +345,10 @@ const CourseList = () => {
                                     <div className="flex items-center gap-2">
                                         {!isDeleteMode && (
                                             <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    toggleCollectionItem('courses', course._id);
-                                                }}
+                                                onClick={(e) => { e.stopPropagation(); toggleCollectionItem('courses', course._id); }}
                                                 className={`p-2 rounded-full transition-all ${userCollection.courses?.some(c => (c._id || c) === course._id)
                                                     ? 'text-brand-600 bg-brand-50 dark:bg-brand-900/40'
-                                                    : 'text-gray-400 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-900/20'
-                                                    }`}
+                                                    : 'text-gray-400 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-900/20'}`}
                                             >
                                                 <Bookmark className={`w-5 h-5 ${userCollection.courses?.some(c => (c._id || c) === course._id) ? 'fill-current' : ''}`} />
                                             </button>
@@ -304,41 +366,113 @@ const CourseList = () => {
                                 </div>
                                 <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">{course.name}</h3>
                                 <p className="text-sm text-gray-500 dark:text-gray-400 font-mono mt-1">{course.code}</p>
-                                <p className="mt-2 text-gray-600 dark:text-gray-400 text-sm line-clamp-3">
+                                <p className="mt-2 text-gray-600 dark:text-gray-400 text-sm line-clamp-2">
                                     {course.description || 'No description available.'}
                                 </p>
 
-                                <div className="mt-4">
-                                    <label className="text-xs text-gray-500 dark:text-gray-400 font-medium uppercase tracking-wide">Select Semester</label>
-                                    <div className="relative mt-1">
-                                        <CustomSelect
-                                            value={selectedSemesters[course._id] || 'all'}
-                                            onChange={(newValue) => handleSemesterChange(course._id, newValue)}
-                                            options={[
-                                                { value: 'all', label: 'All Semesters' },
-                                                ...courseSemesters.map(sem => ({ value: sem._id, label: sem.name }))
-                                            ]}
-                                            placeholder="Select Semester"
-                                        />
-                                    </div>
+                                <div className="mt-4 flex items-center gap-2">
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); handleViewSubjects(course._id); }}
+                                        className="flex-1 text-center px-4 py-2 bg-brand-600 dark:bg-brand-700 text-white text-sm font-medium rounded-lg hover:bg-brand-700 dark:hover:bg-brand-600 transition-colors shadow-sm"
+                                    >
+                                        View Subjects
+                                    </button>
+                                    {/* Semesters toggle button */}
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); handleCourseClick(course._id); }}
+                                        className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium border transition-all ${isExpanded
+                                            ? 'bg-brand-50 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400 border-brand-200 dark:border-brand-800'
+                                            : 'bg-gray-50 dark:bg-zinc-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-zinc-700 hover:border-brand-300 dark:hover:border-brand-700'
+                                            }`}
+                                    >
+                                        <Calendar className="w-3.5 h-3.5" />
+                                        <span>{selectedSem ? (selectedSem.name.length > 8 ? selectedSem.code || selectedSem.name : selectedSem.name) : courseSemesters.length}</span>
+                                        {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                                    </button>
                                 </div>
                             </div>
-                            <div className="mt-4 flex justify-between items-center gap-3">
-                                <button
-                                    onClick={() => handleViewSubjects(course._id)}
-                                    className="flex-1 text-center px-4 py-2 bg-brand-600 dark:bg-brand-700 text-white text-sm font-medium rounded-lg hover:bg-brand-700 dark:hover:bg-brand-600 transition-colors shadow-sm dark:shadow-brand-500/10"
-                                >
-                                    View Subjects
-                                </button>
-                                {(user?.role === 'admin' || user?.role === 'teacher') && (
-                                    <button
-                                        onClick={() => navigate(`/semesters?courseId=${course._id}`)}
-                                        className="text-sm text-gray-500 dark:text-gray-400 hover:text-brand-600 dark:hover:text-brand-400 font-medium hover:bg-brand-50 dark:hover:bg-brand-900/20 px-3 py-2 rounded-lg transition-colors"
-                                    >
-                                        Manage Semesters
-                                    </button>
-                                )}
-                            </div>
+
+                            {/* Inline Semester Panel */}
+                            {isExpanded && !isDeleteMode && (
+                                <div className="border-t border-gray-100 dark:border-zinc-800 bg-gray-50/60 dark:bg-zinc-950/50 px-5 py-4">
+                                    <div className="flex items-center justify-between mb-3">
+                                        <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Semesters</p>
+                                        {(user?.role === 'admin' || user?.role === 'teacher') && (
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); setShowAddSemModal(course._id); setNewSem({ name: '', code: '', description: '' }); }}
+                                                className="flex items-center gap-1 text-xs text-brand-600 dark:text-brand-400 hover:underline font-semibold"
+                                            >
+                                                <Plus className="w-3 h-3" /> Add
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    {courseSemesters.length === 0 ? (
+                                        <p className="text-xs text-gray-400 dark:text-gray-500 italic">No semesters defined for this course.</p>
+                                    ) : (
+                                        <div className="space-y-1.5 max-h-52 overflow-y-auto pr-1">
+                                            {/* All Semesters option */}
+                                            <div
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setSelectedSemesters(prev => ({ ...prev, [course._id]: null }));
+                                                    setExpandedCourse(null);
+                                                }}
+                                                className={`flex items-center gap-2.5 px-3 py-2 rounded-lg border cursor-pointer transition-all ${!selectedSemesters[course._id]
+                                                    ? 'bg-brand-50 dark:bg-brand-900/30 border-brand-200 dark:border-brand-800'
+                                                    : 'bg-white dark:bg-zinc-900 border-gray-100 dark:border-zinc-800 hover:border-brand-200 dark:hover:border-brand-800'
+                                                    }`}
+                                            >
+                                                <div className={`w-3.5 h-3.5 rounded-full border-2 flex-shrink-0 ${!selectedSemesters[course._id]
+                                                    ? 'border-brand-500 bg-brand-500'
+                                                    : 'border-gray-300 dark:border-zinc-600'
+                                                    }`} />
+                                                <span className={`text-xs font-medium ${!selectedSemesters[course._id]
+                                                    ? 'text-brand-700 dark:text-brand-400'
+                                                    : 'text-gray-600 dark:text-gray-400'
+                                                    }`}>All Semesters</span>
+                                            </div>
+                                            {courseSemesters.map(sem => (
+                                                <div
+                                                    key={sem._id}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setSelectedSemesters(prev => ({ ...prev, [course._id]: sem._id }));
+                                                        setExpandedCourse(null);
+                                                    }}
+                                                    className={`flex items-center justify-between gap-2 px-3 py-2 rounded-lg border cursor-pointer transition-all group ${selectedSemesters[course._id] === sem._id
+                                                        ? 'bg-brand-50 dark:bg-brand-900/30 border-brand-200 dark:border-brand-800'
+                                                        : 'bg-white dark:bg-zinc-900 border-gray-100 dark:border-zinc-800 hover:border-brand-200 dark:hover:border-brand-800'
+                                                        }`}
+                                                >
+                                                    <div className="flex items-center gap-2.5 min-w-0">
+                                                        <div className={`w-3.5 h-3.5 rounded-full border-2 flex-shrink-0 ${selectedSemesters[course._id] === sem._id
+                                                            ? 'border-brand-500 bg-brand-500'
+                                                            : 'border-gray-300 dark:border-zinc-600'
+                                                            }`} />
+                                                        <div className="min-w-0">
+                                                            <p className={`text-xs font-medium truncate ${selectedSemesters[course._id] === sem._id
+                                                                ? 'text-brand-700 dark:text-brand-400'
+                                                                : 'text-gray-700 dark:text-gray-300'
+                                                                }`}>{sem.name}</p>
+                                                            <p className="text-[10px] text-gray-400 font-mono">{sem.code}</p>
+                                                        </div>
+                                                    </div>
+                                                    {(user?.role === 'admin' || user?.role === 'teacher') && (
+                                                        <button
+                                                            onClick={(e) => { e.stopPropagation(); handleDeleteSemester(sem._id); }}
+                                                            disabled={deletingSemId === sem._id}
+                                                            className="opacity-0 group-hover:opacity-100 p-1 text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-all disabled:opacity-50 flex-shrink-0"
+                                                        >
+                                                            <Trash2 className="w-3.5 h-3.5" />
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     );
                 })}
@@ -351,54 +485,167 @@ const CourseList = () => {
             )}
 
             {showAddModal && (
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
-                    <div className="bg-white dark:bg-zinc-900 rounded-2xl border dark:border-zinc-800 shadow-2xl p-6 w-full max-w-md animate-in fade-in zoom-in duration-200">
-                        <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">Add New Course</h2>
-                        <form onSubmit={handleAddCourse}>
+                <div className="fixed inset-0 flex items-start justify-center pt-12 sm:pt-24 z-[60] p-4 animate-in fade-in duration-200">
+                    <div
+                        className="absolute inset-0"
+                        onClick={() => setShowAddModal(false)}
+                    />
+                    <div className="bg-white dark:bg-zinc-900 rounded-2xl border dark:border-zinc-800 shadow-[0_20px_50px_rgba(0,0,0,0.2)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.4)] w-full max-w-md animate-in zoom-in duration-200 overflow-hidden relative z-10">
+                        <div className="flex items-center justify-between p-6 border-b dark:border-zinc-800">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-brand-50 dark:bg-brand-900/40 rounded-lg">
+                                    <Book className="w-5 h-5 text-brand-600 dark:text-brand-400" />
+                                </div>
+                                <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Add New Course</h2>
+                            </div>
+                            <button
+                                onClick={() => setShowAddModal(false)}
+                                className="p-2 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-xl text-gray-400 transition-all"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        <form onSubmit={handleAddCourse} className="p-6">
                             <div className="space-y-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Course Name</label>
+                                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5 ml-1">Course Name</label>
                                     <input
                                         type="text"
                                         required
+                                        placeholder="Enter course name..."
                                         value={newCourse.name}
                                         onChange={(e) => setNewCourse({ ...newCourse, name: e.target.value })}
-                                        className="block w-full rounded-xl border-gray-200 dark:border-zinc-800 shadow-sm focus:border-brand-500 dark:focus:border-brand-500 focus:ring-brand-500 dark:focus:ring-brand-500 bg-white dark:bg-zinc-950 text-gray-900 dark:text-gray-100 border p-2.5 transition-all"
+                                        className="block w-full rounded-xl border border-gray-200 dark:border-zinc-800 shadow-sm focus:border-brand-500 dark:focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 bg-white dark:bg-zinc-950 text-gray-900 dark:text-gray-100 p-3 transition-all outline-none"
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Course Code</label>
+                                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5 ml-1">Course Code</label>
                                     <input
                                         type="text"
                                         required
+                                        placeholder="e.g. CS101"
                                         value={newCourse.code}
                                         onChange={(e) => setNewCourse({ ...newCourse, code: e.target.value })}
-                                        className="block w-full rounded-xl border-gray-200 dark:border-zinc-800 shadow-sm focus:border-brand-500 dark:focus:border-brand-500 focus:ring-brand-500 dark:focus:ring-brand-500 bg-white dark:bg-zinc-950 text-gray-900 dark:text-gray-100 border p-2.5 transition-all"
+                                        className="block w-full rounded-xl border border-gray-200 dark:border-zinc-800 shadow-sm focus:border-brand-500 dark:focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 bg-white dark:bg-zinc-950 text-gray-900 dark:text-gray-100 p-3 transition-all outline-none font-mono"
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description</label>
+                                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5 ml-1">Description</label>
                                     <textarea
+                                        placeholder="Optional course details..."
                                         value={newCourse.description}
                                         onChange={(e) => setNewCourse({ ...newCourse, description: e.target.value })}
-                                        className="block w-full rounded-xl border-gray-200 dark:border-zinc-800 shadow-sm focus:border-brand-500 dark:focus:border-brand-500 focus:ring-brand-500 dark:focus:ring-brand-500 bg-white dark:bg-zinc-950 text-gray-900 dark:text-gray-100 border p-2.5 transition-all"
-                                        rows="3"
+                                        className="block w-full rounded-xl border border-gray-200 dark:border-zinc-800 shadow-sm focus:border-brand-500 dark:focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 bg-white dark:bg-zinc-950 text-gray-900 dark:text-gray-100 p-3 transition-all outline-none resize-none"
+                                        rows="2"
                                     />
+                                </div>
+
+                                {/* Number of Semesters Input */}
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5 ml-1">Number of Semesters</label>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        max="12"
+                                        placeholder="e.g. 4"
+                                        value={newCourse.semesterCount}
+                                        onChange={(e) => setNewCourse({ ...newCourse, semesterCount: e.target.value })}
+                                        className="block w-full rounded-xl border border-gray-200 dark:border-zinc-800 shadow-sm focus:border-brand-500 dark:focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 bg-white dark:bg-zinc-950 text-gray-900 dark:text-gray-100 p-3 transition-all outline-none"
+                                    />
+                                    <p className="text-[10px] text-gray-400 mt-1 ml-1">The system will automatically create Semester 1, Semester 2... for you.</p>
                                 </div>
                             </div>
                             <div className="mt-8 flex justify-end gap-3">
                                 <button
                                     type="button"
                                     onClick={() => setShowAddModal(false)}
-                                    className="px-4 py-2.5 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-xl transition-all font-medium"
+                                    className="px-6 py-2.5 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-xl transition-all font-semibold"
                                 >
                                     Cancel
                                 </button>
                                 <button
                                     type="submit"
-                                    className="px-6 py-2.5 bg-brand-600 text-white rounded-xl hover:bg-brand-700 shadow-lg shadow-brand-500/20 font-bold"
+                                    className="px-8 py-2.5 bg-brand-600 text-white rounded-xl hover:bg-brand-700 shadow-lg shadow-brand-500/20 font-bold transition-all active:scale-[0.98]"
                                 >
-                                    Add Course
+                                    Create Course
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {showAddSemModal && (
+                <div className="fixed inset-0 flex items-start justify-center pt-12 sm:pt-24 z-[70] p-4 animate-in fade-in duration-200">
+                    <div
+                        className="absolute inset-0"
+                        onClick={() => setShowAddSemModal(null)}
+                    />
+                    <div className="bg-white dark:bg-zinc-900 rounded-2xl border dark:border-zinc-800 shadow-[0_20px_50px_rgba(0,0,0,0.2)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.4)] w-full max-w-sm animate-in zoom-in duration-200 overflow-hidden relative z-10">
+                        <div className="flex items-center justify-between p-5 border-b dark:border-zinc-800">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-brand-50 dark:bg-brand-900/40 rounded-lg">
+                                    <Calendar className="w-4 h-4 text-brand-600 dark:text-brand-400" />
+                                </div>
+                                <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">Add Semester</h2>
+                            </div>
+                            <button
+                                onClick={() => setShowAddSemModal(null)}
+                                className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-zinc-800 text-gray-400 transition-colors"
+                            >
+                                <X className="w-4 h-4" />
+                            </button>
+                        </div>
+
+                        <form onSubmit={(e) => handleAddSemester(e, showAddSemModal)} className="p-5">
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5 ml-1">Semester Name</label>
+                                    <input
+                                        type="text"
+                                        required
+                                        placeholder="e.g. Semester 1"
+                                        value={newSem.name}
+                                        onChange={(e) => setNewSem({ ...newSem, name: e.target.value })}
+                                        className="block w-full rounded-xl border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-gray-900 dark:text-gray-100 p-2.5 text-sm focus:ring-4 focus:ring-brand-500/10 focus:border-brand-500 transition-all outline-none"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5 ml-1">Semester Code</label>
+                                    <input
+                                        type="text"
+                                        required
+                                        placeholder="e.g. SEM1"
+                                        value={newSem.code}
+                                        onChange={(e) => setNewSem({ ...newSem, code: e.target.value })}
+                                        className="block w-full rounded-xl border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-gray-900 dark:text-gray-100 p-2.5 text-sm focus:ring-4 focus:ring-brand-500/10 focus:border-brand-500 transition-all outline-none font-mono"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5 ml-1">Description <span className="text-gray-400 font-normal">(optional)</span></label>
+                                    <textarea
+                                        placeholder="Description..."
+                                        value={newSem.description}
+                                        onChange={(e) => setNewSem({ ...newSem, description: e.target.value })}
+                                        className="block w-full rounded-xl border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-gray-900 dark:text-gray-100 p-2.5 text-sm focus:ring-4 focus:ring-brand-500/10 focus:border-brand-500 transition-all outline-none resize-none"
+                                        rows="2"
+                                    />
+                                </div>
+                            </div>
+                            <div className="mt-6 flex justify-end gap-3">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowAddSemModal(null)}
+                                    className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-xl text-sm font-semibold transition-all"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="px-6 py-2 bg-brand-600 text-white rounded-xl hover:bg-brand-700 text-sm font-bold shadow-lg shadow-brand-500/20 transition-all active:scale-[0.98]"
+                                >
+                                    Add Semester
                                 </button>
                             </div>
                         </form>

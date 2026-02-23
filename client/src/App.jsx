@@ -11,7 +11,6 @@ import AdminDashboard from './components/AdminDashboard';
 import CourseList from './components/CourseList';
 
 import SubjectList from './components/SubjectList';
-import SemesterList from './components/SemesterList';
 import ImageViewer from './components/ImageViewer';
 import DocViewer from './components/DocViewer';
 import MyCollection from './components/MyCollection';
@@ -60,11 +59,7 @@ function AppRoutes() {
             <SubjectList />
           </PrivateRoute>
         } />
-        <Route path="/semesters" element={
-          <PrivateRoute staffOnly>
-            <SemesterList />
-          </PrivateRoute>
-        } />
+
         <Route path="/collection" element={
           <PrivateRoute>
             <MyCollection />

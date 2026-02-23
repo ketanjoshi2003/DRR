@@ -640,83 +640,106 @@ const SubjectList = () => {
             )}
 
             {showAddModal && (
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                    <div className="bg-white dark:bg-zinc-900 rounded-xl border dark:border-zinc-800 shadow-2xl p-6 w-full max-w-md animate-in fade-in zoom-in duration-200">
-                        <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">Add New Subject</h2>
-                        <form onSubmit={handleAddSubject}>
+                <div className="fixed inset-0 flex items-start justify-center pt-12 sm:pt-24 z-50 p-4 animate-in fade-in duration-200">
+                    <div
+                        className="absolute inset-0"
+                        onClick={() => setShowAddModal(false)}
+                    />
+                    <div className="bg-white dark:bg-zinc-900 rounded-2xl border dark:border-zinc-800 shadow-[0_20px_50px_rgba(0,0,0,0.2)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.4)] w-full max-w-md animate-in zoom-in duration-200 overflow-hidden relative z-10">
+                        <div className="flex items-center justify-between p-6 border-b dark:border-zinc-800">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-brand-50 dark:bg-brand-900/40 rounded-lg">
+                                    <Book className="w-5 h-5 text-brand-600 dark:text-brand-400" />
+                                </div>
+                                <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Add New Subject</h2>
+                            </div>
+                            <button
+                                onClick={() => setShowAddModal(false)}
+                                className="p-2 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-xl text-gray-400 transition-all"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        <form onSubmit={handleAddSubject} className="p-6">
                             <div className="space-y-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Select Course</label>
-                                    <select
-                                        required
-                                        value={newSubject.courseId}
-                                        onChange={(e) => setNewSubject({ ...newSubject, courseId: e.target.value, semesterId: '' })}
-                                        className="block w-full rounded-md border-gray-300 dark:border-zinc-800 shadow-sm focus:border-brand-500 dark:focus:border-brand-500 focus:ring-brand-500 dark:focus:ring-brand-500 bg-white dark:bg-zinc-950 text-gray-900 dark:text-gray-100 border p-2 transition-colors duration-200"
-                                    >
-                                        <option value="">-- Select Course --</option>
-                                        {courses.map(c => (
-                                            <option key={c._id} value={c._id}>{c.name} ({c.code})</option>
-                                        ))}
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Select Semester</label>
-                                    <select
-                                        required
-                                        value={newSubject.semesterId}
-                                        onChange={(e) => setNewSubject({ ...newSubject, semesterId: e.target.value })}
-                                        className="block w-full rounded-md border-gray-300 dark:border-zinc-800 shadow-sm focus:border-brand-500 dark:focus:border-brand-500 focus:ring-brand-500 dark:focus:ring-brand-500 bg-white dark:bg-zinc-950 text-gray-900 dark:text-gray-100 border p-2 transition-colors duration-200"
-                                        disabled={!newSubject.courseId}
-                                    >
-                                        <option value="">-- Select Semester --</option>
-                                        {semesters
-                                            .filter(s => s.course?._id === newSubject.courseId)
-                                            .map(s => (
-                                                <option key={s._id} value={s._id}>{s.name} ({s.code})</option>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5 ml-1">Course</label>
+                                        <select
+                                            required
+                                            value={newSubject.courseId}
+                                            onChange={(e) => setNewSubject({ ...newSubject, courseId: e.target.value, semesterId: '' })}
+                                            className="block w-full rounded-xl border border-gray-200 dark:border-zinc-800 shadow-sm focus:border-brand-500 dark:focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 bg-white dark:bg-zinc-950 text-gray-900 dark:text-gray-100 p-2.5 text-sm transition-all outline-none"
+                                        >
+                                            <option value="">Select Course</option>
+                                            {courses.map(c => (
+                                                <option key={c._id} value={c._id}>{c.code}</option>
                                             ))}
-                                    </select>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5 ml-1">Semester</label>
+                                        <select
+                                            required
+                                            value={newSubject.semesterId}
+                                            onChange={(e) => setNewSubject({ ...newSubject, semesterId: e.target.value })}
+                                            className="block w-full rounded-xl border border-gray-200 dark:border-zinc-800 shadow-sm focus:border-brand-500 dark:focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 bg-white dark:bg-zinc-950 text-gray-900 dark:text-gray-100 p-2.5 text-sm transition-all outline-none disabled:opacity-50"
+                                            disabled={!newSubject.courseId}
+                                        >
+                                            <option value="">Select Sem</option>
+                                            {semesters
+                                                .filter(s => s.course?._id === newSubject.courseId)
+                                                .map(s => (
+                                                    <option key={s._id} value={s._id}>{s.name}</option>
+                                                ))}
+                                        </select>
+                                    </div>
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Subject Name</label>
+                                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5 ml-1">Subject Name</label>
                                     <input
                                         type="text"
                                         required
+                                        placeholder="e.g. Data Structures"
                                         value={newSubject.name}
                                         onChange={(e) => setNewSubject({ ...newSubject, name: e.target.value })}
-                                        className="block w-full rounded-md border-gray-300 dark:border-zinc-800 shadow-sm focus:border-brand-500 dark:focus:border-brand-500 focus:ring-brand-500 dark:focus:ring-brand-500 bg-white dark:bg-zinc-950 text-gray-900 dark:text-gray-100 border p-2 transition-colors duration-200"
+                                        className="block w-full rounded-xl border border-gray-200 dark:border-zinc-800 shadow-sm focus:border-brand-500 dark:focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 bg-white dark:bg-zinc-950 text-gray-900 dark:text-gray-100 p-3 text-sm transition-all outline-none"
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Subject Code</label>
+                                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5 ml-1">Subject Code</label>
                                     <input
                                         type="text"
                                         required
+                                        placeholder="e.g. CS201"
                                         value={newSubject.code}
                                         onChange={(e) => setNewSubject({ ...newSubject, code: e.target.value })}
-                                        className="block w-full rounded-md border-gray-300 dark:border-zinc-800 shadow-sm focus:border-brand-500 dark:focus:border-brand-500 focus:ring-brand-500 dark:focus:ring-brand-500 bg-white dark:bg-zinc-950 text-gray-900 dark:text-gray-100 border p-2 transition-colors duration-200"
+                                        className="block w-full rounded-xl border border-gray-200 dark:border-zinc-800 shadow-sm focus:border-brand-500 dark:focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 bg-white dark:bg-zinc-950 text-gray-900 dark:text-gray-100 p-3 text-sm transition-all outline-none font-mono"
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description</label>
+                                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5 ml-1">Description</label>
                                     <textarea
+                                        placeholder="Optional details..."
                                         value={newSubject.description}
                                         onChange={(e) => setNewSubject({ ...newSubject, description: e.target.value })}
-                                        className="block w-full rounded-md border-gray-300 dark:border-zinc-800 shadow-sm focus:border-brand-500 dark:focus:border-brand-500 focus:ring-brand-500 dark:focus:ring-brand-500 bg-white dark:bg-zinc-950 text-gray-900 dark:text-gray-100 border p-2 transition-colors duration-200"
+                                        className="block w-full rounded-xl border border-gray-200 dark:border-zinc-800 shadow-sm focus:border-brand-500 dark:focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 bg-white dark:bg-zinc-950 text-gray-900 dark:text-gray-100 p-3 text-sm transition-all outline-none resize-none"
                                         rows="3"
                                     />
                                 </div>
                             </div>
-                            <div className="mt-6 flex justify-end gap-3">
+                            <div className="mt-8 flex justify-end gap-3">
                                 <button
                                     type="button"
                                     onClick={() => setShowAddModal(false)}
-                                    className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-md transition-colors"
+                                    className="px-6 py-2.5 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-xl transition-all font-semibold"
                                 >
                                     Cancel
                                 </button>
                                 <button
                                     type="submit"
-                                    className="px-4 py-2 bg-brand-600 dark:bg-brand-700 text-white rounded-lg hover:bg-brand-700 dark:hover:bg-brand-600 shadow-sm dark:shadow-brand-500/10 font-medium transition-colors"
+                                    className="px-8 py-2.5 bg-brand-600 text-white rounded-xl hover:bg-brand-700 shadow-lg shadow-brand-500/20 font-bold transition-all active:scale-[0.98]"
                                 >
                                     Add Subject
                                 </button>

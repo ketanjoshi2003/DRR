@@ -4,6 +4,7 @@ import api from '../api/axios';
 import { Upload, BarChart, FileText, Users, Clock, AlertCircle, CheckCircle, Search, GraduationCap, BookOpen, Trash2, RotateCcw, X, ChevronDown, ChevronUp, Eye, User, Download } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import BulkUpload from './BulkUpload';
+import CSVImporter from './CSVImporter';
 
 const AdminDashboard = ({ tab = 'upload' }) => {
     const { user } = useAuth();
@@ -27,6 +28,7 @@ const AdminDashboard = ({ tab = 'upload' }) => {
     const [expandedMaterial, setExpandedMaterial] = useState(null);
     const [teacherSearch, setTeacherSearch] = useState('');
     const [analyticsView, setAnalyticsView] = useState('students');
+    const [uploadSubTab, setUploadSubTab] = useState('files'); // 'files' or 'csv'
 
     useEffect(() => {
         if (tab === 'analytics') {
@@ -210,7 +212,28 @@ const AdminDashboard = ({ tab = 'upload' }) => {
 
             {tab === 'upload' && (
                 <div className="max-w-4xl">
-                    <BulkUpload />
+                    <div className="flex items-center gap-6 mb-8 border-b dark:border-zinc-800">
+                        <button
+                            onClick={() => setUploadSubTab('files')}
+                            className={`pb-4 text-sm font-bold transition-all relative ${uploadSubTab === 'files'
+                                ? 'text-brand-600 dark:text-brand-400'
+                                : 'text-gray-400 hover:text-gray-600 dark:hover:text-zinc-500'}`}
+                        >
+                            File Uploads
+                            {uploadSubTab === 'files' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-600 dark:bg-brand-400 rounded-full" />}
+                        </button>
+                        <button
+                            onClick={() => setUploadSubTab('csv')}
+                            className={`pb-4 text-sm font-bold transition-all relative ${uploadSubTab === 'csv'
+                                ? 'text-brand-600 dark:text-brand-400'
+                                : 'text-gray-400 hover:text-gray-600 dark:hover:text-zinc-500'}`}
+                        >
+                            CSV Data Mapping
+                            {uploadSubTab === 'csv' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-600 dark:bg-brand-400 rounded-full" />}
+                        </button>
+                    </div>
+
+                    {uploadSubTab === 'files' ? <BulkUpload /> : <CSVImporter />}
                 </div>
             )}
 
