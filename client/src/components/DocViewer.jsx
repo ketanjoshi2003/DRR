@@ -134,15 +134,17 @@ const DocViewer = () => {
         const existingMarks = containerRef.current.querySelectorAll('mark[data-note-highlight]');
         existingMarks.forEach(mark => {
             const parent = mark.parentNode;
-            // Replace mark with its text content
-            const textNode = document.createTextNode(mark.textContent);
-            parent.replaceChild(textNode, mark);
-            parent.normalize(); // merge adjacent text nodes
+            if (parent) {
+                const textNode = document.createTextNode(mark.textContent);
+                parent.replaceChild(textNode, mark);
+                parent.normalize();
+            }
         });
 
         if (notes.length === 0) return;
 
         // Walk through all text nodes in the container
+        const textNodes = [];
         const treeWalker = document.createTreeWalker(
             containerRef.current,
             NodeFilter.SHOW_TEXT,
@@ -150,10 +152,9 @@ const DocViewer = () => {
             false
         );
 
-        const textNodes = [];
         let node;
         while ((node = treeWalker.nextNode())) {
-            if (node.textContent.trim().length > 0) {
+            if (node.textContent.length > 0) {
                 textNodes.push(node);
             }
         }
@@ -168,29 +169,39 @@ const DocViewer = () => {
         });
 
         const fullTextLower = fullText.toLowerCase();
-
         // For each note, find occurrences and wrap them
         notes.forEach(note => {
             const searchText = note.selectedText;
             if (!searchText || searchText.trim().length === 0) return;
 
-            const searchLower = searchText.toLowerCase();
-            let searchStart = 0;
-            let foundIndex;
+            // FUZZY MATCHING:
+            // Normalize spaces, escape for regex, and allow flexible whitespace between everything
+            // This handles cases where selection includes newlines or spaces not present in original raw text
+            const escapedSearch = searchText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            // Replace any existing whitespace in search with \s* (multi-line flexible space)
+            const fuzzyRegexSource = escapedSearch.replace(/\s+/g, '\\s*');
 
-            while ((foundIndex = fullTextLower.indexOf(searchLower, searchStart)) !== -1) {
-                const matchStart = foundIndex;
-                const matchEnd = foundIndex + searchLower.length;
-                searchStart = matchEnd;
+            let match;
+            try {
+                const regex = new RegExp(fuzzyRegexSource, 'gi');
+                match = regex.exec(fullText);
+            } catch (err) {
+                console.error('Highlight regex creation failed:', err);
+                return;
+            }
 
-                // Find which text nodes this match spans
+            if (match) {
+                const matchStart = match.index;
+                const matchEnd = match.index + match[0].length;
+
+                // Find which text nodes this match spans and highlight them ALL
                 for (let i = 0; i < nodeMap.length; i++) {
                     const nm = nodeMap[i];
-                    if (nm.end <= matchStart) continue;
-                    if (nm.start >= matchEnd) break;
+                    if (nm.end <= matchStart) continue; // Match starts after this node
+                    if (nm.start >= matchEnd) break;    // Match has ended before this node
 
                     const textNode = nm.node;
-                    if (!textNode.parentNode) continue; // already replaced
+                    if (!textNode.parentNode) continue; // Node already replaced by previous note wrap
 
                     const nodeStart = nm.start;
                     const nodeEnd = nm.end;
@@ -209,45 +220,45 @@ const DocViewer = () => {
                     const frag = document.createDocumentFragment();
 
                     if (before) {
-                        const beforeNode = document.createTextNode(before);
-                        frag.appendChild(beforeNode);
+                        frag.appendChild(document.createTextNode(before));
                     }
 
                     const mark = document.createElement('mark');
                     mark.setAttribute('data-note-highlight', 'true');
                     mark.setAttribute('data-note-id', note._id);
-                    mark.style.backgroundColor = note.color || 'rgba(250, 204, 21, 0.4)';
+                    mark.style.backgroundColor = note.color || 'rgba(250, 204, 21, 0.45)';
                     mark.style.color = 'inherit';
                     mark.style.borderRadius = '2px';
                     mark.style.padding = '1px 0';
                     mark.style.cursor = 'pointer';
+                    mark.style.mixBlendMode = 'multiply';
                     mark.title = note.noteContent || 'Note';
                     mark.textContent = matched;
                     frag.appendChild(mark);
 
                     if (after) {
-                        const afterNode = document.createTextNode(after);
-                        frag.appendChild(afterNode);
+                        frag.appendChild(document.createTextNode(after));
                     }
 
-                    textNode.parentNode.replaceChild(frag, textNode);
+                    const parent = textNode.parentNode;
+                    parent.replaceChild(frag, textNode);
 
-                    // Update the nodeMap to reflect the split
-                    // Remove this entry and add new ones for before / mark / after
+                    // Update the nodeMap to reflect nodes we just created
                     const newEntries = [];
-                    if (before) {
-                        newEntries.push({ node: frag.childNodes[0], start: nodeStart, end: nodeStart + before.length });
+                    let currentNode = mark.previousSibling;
+                    if (before && currentNode) {
+                        newEntries.push({ node: currentNode, start: nodeStart, end: nodeStart + before.length });
                     }
-                    // mark's text child
                     newEntries.push({ node: mark.firstChild, start: nodeStart + overlapStart, end: nodeStart + overlapEnd });
-                    if (after) {
-                        newEntries.push({ node: frag.lastChild || frag.childNodes[frag.childNodes.length - 1], start: nodeStart + overlapEnd, end: nodeEnd });
+
+                    currentNode = mark.nextSibling;
+                    if (after && currentNode) {
+                        newEntries.push({ node: currentNode, start: nodeStart + overlapEnd, end: nodeEnd });
                     }
 
                     nodeMap.splice(i, 1, ...newEntries);
-                    break; // Only highlight first occurrence per note
+                    i += newEntries.length - 1;
                 }
-                break; // Only highlight first occurrence per note
             }
         });
     }, [notes, docRendered]);
@@ -579,8 +590,8 @@ const DocViewer = () => {
                 .dark-mode-doc .docx-preview-wrapper {
                     filter: invert(1) hue-rotate(180deg);
                 }
-                .dark-mode-doc img {
-                    filter: invert(1) hue-rotate(180deg); /* Revert images */
+                .dark-mode-doc img, .dark-mode-doc mark[data-note-highlight] {
+                    filter: invert(1) hue-rotate(180deg); /* Revert images and highlights */
                 }
                 /* Note highlight styles */
                 mark[data-note-highlight] {
