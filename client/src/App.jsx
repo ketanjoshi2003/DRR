@@ -16,7 +16,7 @@ import ImageViewer from './components/ImageViewer';
 import DocViewer from './components/DocViewer';
 import MyCollection from './components/MyCollection';
 
-const PrivateRoute = ({ children, adminOnly = false }) => {
+const PrivateRoute = ({ children, adminOnly = false, staffOnly = false }) => {
   const { user, loading } = useAuth();
 
   if (loading) return <div>Loading...</div>;
@@ -26,6 +26,10 @@ const PrivateRoute = ({ children, adminOnly = false }) => {
   }
 
   if (adminOnly && user.role !== 'admin') {
+    return <Navigate to="/" />;
+  }
+
+  if (staffOnly && user.role !== 'admin' && user.role !== 'teacher') {
     return <Navigate to="/" />;
   }
 
@@ -57,7 +61,7 @@ function AppRoutes() {
           </PrivateRoute>
         } />
         <Route path="/semesters" element={
-          <PrivateRoute adminOnly>
+          <PrivateRoute staffOnly>
             <SemesterList />
           </PrivateRoute>
         } />
@@ -82,12 +86,12 @@ function AppRoutes() {
           </PrivateRoute>
         } />
         <Route path="/upload" element={
-          <PrivateRoute adminOnly>
+          <PrivateRoute staffOnly>
             <AdminDashboard tab="upload" />
           </PrivateRoute>
         } />
         <Route path="/analytics" element={
-          <PrivateRoute adminOnly>
+          <PrivateRoute staffOnly>
             <AdminDashboard tab="analytics" />
           </PrivateRoute>
         } />

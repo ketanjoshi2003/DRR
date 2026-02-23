@@ -152,22 +152,23 @@ const Register = () => {
                                         className="block w-full px-3 py-2 border border-gray-300 dark:border-zinc-800 rounded-md shadow-sm bg-white dark:bg-zinc-900 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-brand-500 dark:focus:ring-brand-500 focus:border-brand-500 dark:focus:border-brand-500 sm:text-sm transition-all duration-200"
                                     >
                                         <option value="reader">Reader</option>
+                                        <option value="teacher">Teacher (Restricted)</option>
                                         <option value="admin">Administrator (Restricted)</option>
                                     </select>
                                 </div>
                             </div>
 
-                            {role === 'admin' && (
+                            {(role === 'admin' || role === 'teacher') && (
                                 <div className="animate-in fade-in slide-in-from-top-2 duration-300">
                                     <label htmlFor="adminSecret" className="block text-sm font-bold text-brand-600 dark:text-brand-400 transition-colors">
-                                        Admin Access Secret Key
+                                        {role === 'admin' ? 'Admin' : 'Teacher'} Access Secret Key
                                     </label>
                                     <div className="mt-1">
                                         <input
                                             id="adminSecret"
                                             name="adminSecret"
                                             type="password"
-                                            required={role === 'admin'}
+                                            required={role === 'admin' || role === 'teacher'}
                                             placeholder="Enter secure key"
                                             value={adminSecret}
                                             onChange={(e) => setAdminSecret(e.target.value)}
@@ -183,7 +184,7 @@ const Register = () => {
                                 type="submit"
                                 className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-brand-600 dark:bg-brand-700 hover:bg-brand-700 dark:hover:bg-brand-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-500 transition-all duration-200 shadow-brand-500/20"
                             >
-                                {role === 'admin' ? 'Verify & Register as Admin' : 'Register Account'}
+                                {role === 'admin' ? 'Verify & Register as Admin' : role === 'teacher' ? 'Verify & Register as Teacher' : 'Register Account'}
                             </button>
                         </div>
                     </form>

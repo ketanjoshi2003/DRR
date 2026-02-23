@@ -78,7 +78,7 @@ const PageContent = memo(({ pageNumber, scale, notes, selection }) => {
             }
         }
 
-        // Build a full text string with node mapping
+        // Build a full text string with node mapping (raw, no synthetic spaces)
         let fullText = '';
         const nodeMap = [];
         textNodes.forEach(tn => {
@@ -89,19 +89,8 @@ const PageContent = memo(({ pageNumber, scale, notes, selection }) => {
 
         const fullTextLower = fullText.toLowerCase();
 
-        // For each highlight, find and wrap matches
-        highlights.forEach(hl => {
-            const searchLower = hl.text.toLowerCase().trim();
-            if (searchLower.length === 0) return;
-
-            // Try exact substring match first
-            const foundIndex = fullTextLower.indexOf(searchLower);
-            if (foundIndex === -1) return;
-
-            const matchStart = foundIndex;
-            const matchEnd = foundIndex + searchLower.length;
-
-            // Find which text nodes this match spans
+        // Helper: apply highlight marks across text nodes for a given range
+        function applyHighlightRange(matchStart, matchEnd, hl) {
             for (let i = 0; i < nodeMap.length; i++) {
                 const nm = nodeMap[i];
                 if (nm.end <= matchStart) continue;
@@ -171,6 +160,49 @@ const PageContent = memo(({ pageNumber, scale, notes, selection }) => {
                 }
                 nodeMap.splice(i, 1, ...newEntries);
             }
+        }
+
+        // For each highlight, find and wrap matches
+        highlights.forEach(hl => {
+            const searchText = hl.text.trim().replace(/\s+/g, ' ');
+            const searchLower = searchText.toLowerCase();
+            if (searchLower.length === 0) return;
+
+            // 1) Try direct match on the raw concatenated text
+            const directIndex = fullTextLower.indexOf(searchLower);
+            if (directIndex !== -1) {
+                applyHighlightRange(directIndex, directIndex + searchLower.length, hl);
+                return;
+            }
+
+            // 2) Fuzzy match: strip ALL whitespace from both strings,
+            //    find the match, then map positions back to originalText offsets.
+            //    This handles the case where selection has spaces but
+            //    PDF text nodes are concatenated without them.
+            const strippedSearch = searchLower.replace(/\s+/g, '');
+            if (strippedSearch.length === 0) return;
+
+            // Build stripped version of fullText with position mapping
+            const origPositions = []; // origPositions[i] = index in fullText for stripped char i
+            let strippedFull = '';
+            for (let ci = 0; ci < fullText.length; ci++) {
+                if (!/\s/.test(fullText[ci])) {
+                    origPositions.push(ci);
+                    strippedFull += fullText[ci].toLowerCase();
+                }
+            }
+
+            const strippedIdx = strippedFull.indexOf(strippedSearch);
+            if (strippedIdx === -1) return;
+
+            // Map back to original positions
+            const matchStart = origPositions[strippedIdx];
+            const lastStrippedIdx = strippedIdx + strippedSearch.length - 1;
+            const matchEnd = (lastStrippedIdx < origPositions.length)
+                ? origPositions[lastStrippedIdx] + 1
+                : fullText.length;
+
+            applyHighlightRange(matchStart, matchEnd, hl);
         });
     }, [notes, pageNumber, selection]);
 

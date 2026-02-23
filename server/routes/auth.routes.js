@@ -24,13 +24,19 @@ router.post('/register', async (req, res) => {
             return res.status(400).json({ message: 'User already exists' });
         }
 
-        // Real-world security: Force 'reader' role unless a secret key is provided for admin
+        // Real-world security: Force 'reader' role unless a secret key is provided for admin/teacher
         let assignedRole = 'reader';
         if (role === 'admin') {
             if (adminSecret === process.env.ADMIN_SECRET) {
                 assignedRole = 'admin';
             } else {
                 return res.status(403).json({ message: 'Invalid Admin Secret Key. You can only register as a Reader.' });
+            }
+        } else if (role === 'teacher') {
+            if (adminSecret === process.env.TEACHER_SECRET) {
+                assignedRole = 'teacher';
+            } else {
+                return res.status(403).json({ message: 'Invalid Teacher Secret Key. You can only register as a Reader.' });
             }
         }
 
@@ -137,7 +143,7 @@ router.put('/profile', protect, async (req, res) => {
 // @desc    Get all users
 // @route   GET /api/auth/users
 // @access  Admin
-router.get('/users', protect, authorize('admin'), async (req, res) => {
+router.get('/users', protect, authorize('admin', 'teacher'), async (req, res) => {
     try {
         const users = await User.find({}).select('-password').sort('-createdAt');
         res.json(users);

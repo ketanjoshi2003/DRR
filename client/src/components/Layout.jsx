@@ -26,7 +26,7 @@ const Layout = () => {
         { to: "/", icon: LayoutGrid, label: "Library" },
         { to: "/courses", icon: GraduationCap, label: "Courses" },
         { to: "/subjects", icon: Book, label: "Subjects" },
-        ...(user?.role === 'admin' ? [{ to: "/semesters", icon: Calendar, label: "Semesters" }] : []),
+        ...(user?.role === 'admin' || user?.role === 'teacher' ? [{ to: "/semesters", icon: Calendar, label: "Semesters" }] : []),
         { to: "/collection", icon: Bookmark, label: "My Collection" }
     ];
 
@@ -73,11 +73,11 @@ const Layout = () => {
                         </NavLink>
                     ))}
 
-                    {user?.role === 'admin' && (
+                    {(user?.role === 'admin' || user?.role === 'teacher') && (
                         <>
                             <div className={`pt-6 pb-2 ${(isCollapsed && !isMobileOpen) ? 'hidden' : 'px-6'}`}>
                                 <p className="text-[10px] font-bold text-gray-400 dark:text-zinc-600 uppercase tracking-[0.2em]">
-                                    Admin Tools
+                                    {user?.role === 'admin' ? 'Admin Tools' : 'Teacher Tools'}
                                 </p>
                             </div>
                             {adminItems.map((item) => (
@@ -214,7 +214,7 @@ const Layout = () => {
                             </NavLink>
                         );
                     })}
-                    {user?.role === 'admin' && (
+                    {(user?.role === 'admin' || user?.role === 'teacher') && (
                         <button
                             onClick={() => setIsMobileOpen(true)}
                             className={`
@@ -240,7 +240,7 @@ const Layout = () => {
                         onClick={e => e.stopPropagation()}
                     >
                         <div className="w-12 h-1 bg-gray-200 dark:bg-zinc-800 rounded-full mx-auto mb-6" />
-                        <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-6">Admin Controls</h2>
+                        <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-6">{user?.role === 'admin' ? 'Admin' : 'Teacher'} Controls</h2>
                         <div className="grid grid-cols-2 gap-4">
                             {adminItems.map((item) => (
                                 <NavLink

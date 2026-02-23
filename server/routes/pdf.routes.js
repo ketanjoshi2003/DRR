@@ -48,7 +48,7 @@ const { processUploadedPDF, generateTitle } = require('../utils/pdfProcessor');
 // @desc    Upload PDF with metadata extraction and OCR
 // @route   POST /api/pdfs/upload
 // @access  Admin
-router.post('/upload', protect, authorize('admin'), upload.single('file'), async (req, res) => {
+router.post('/upload', protect, authorize('admin', 'teacher'), upload.single('file'), async (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({ message: 'Please upload a file' });
@@ -113,7 +113,7 @@ router.post('/upload', protect, authorize('admin'), upload.single('file'), async
 // @desc    Bulk Upload PDFs with drag-and-drop support
 // @route   POST /api/pdfs/bulk-upload
 // @access  Admin
-router.post('/bulk-upload', protect, authorize('admin'), upload.array('files', 20), async (req, res) => {
+router.post('/bulk-upload', protect, authorize('admin', 'teacher'), upload.array('files', 20), async (req, res) => {
     try {
         if (!req.files || req.files.length === 0) {
             return res.status(400).json({ message: 'Please upload at least one file' });
@@ -417,7 +417,7 @@ router.delete('/:id', protect, authorize('admin'), async (req, res) => {
 // @desc    Bulk assign course/subject to multiple PDFs
 // @route   PUT /api/pdfs/bulk-assign
 // @access  Admin
-router.put('/bulk-assign', protect, authorize('admin'), async (req, res) => {
+router.put('/bulk-assign', protect, authorize('admin', 'teacher'), async (req, res) => {
     try {
         const { ids, courseCode, subjectCode } = req.body;
 
@@ -451,7 +451,7 @@ router.put('/bulk-assign', protect, authorize('admin'), async (req, res) => {
 // @desc    Update PDF metadata
 // @route   PUT /api/pdfs/:id
 // @access  Admin
-router.put('/:id', protect, authorize('admin'), async (req, res) => {
+router.put('/:id', protect, authorize('admin', 'teacher'), async (req, res) => {
     try {
         const { title, metadata, type, numPages, courseCode, subjectCode, accessControl } = req.body;
         const pdf = await Pdf.findById(req.params.id);

@@ -367,7 +367,7 @@ const SubjectList = () => {
                             </div>
                         </div>
 
-                        {user?.role === 'admin' && (
+                        {(user?.role === 'admin' || user?.role === 'teacher') && (
                             <div className="flex flex-wrap gap-2 items-center w-full md:w-auto">
                                 <input
                                     type="file"
@@ -543,7 +543,7 @@ const SubjectList = () => {
                                                             Assigned Materials ({subjectMaterials.length})
                                                         </span>
                                                     </div>
-                                                    {user?.role === 'admin' && subjectMaterials.length > 0 && (
+                                                    {(user?.role === 'admin' || user?.role === 'teacher') && subjectMaterials.length > 0 && (
                                                         <div className="flex items-center gap-2">
                                                             <button
                                                                 onClick={(e) => {
@@ -588,7 +588,7 @@ const SubjectList = () => {
                                                                 className={`flex items-center gap-3 px-4 py-3 hover:bg-white dark:hover:bg-zinc-900 transition-colors ${selectedMaterialIds.includes(material._id) ? 'bg-brand-50/50 dark:bg-brand-950/20' : ''
                                                                     }`}
                                                             >
-                                                                {user?.role === 'admin' && (
+                                                                {(user?.role === 'admin' || user?.role === 'teacher') && (
                                                                     <input
                                                                         type="checkbox"
                                                                         checked={selectedMaterialIds.includes(material._id)}
@@ -608,7 +608,7 @@ const SubjectList = () => {
                                                                         {material.numPages > 0 && <span>• {material.numPages} pages</span>}
                                                                     </p>
                                                                 </div>
-                                                                {user?.role === 'admin' && (
+                                                                {(user?.role === 'admin' || user?.role === 'teacher') && (
                                                                     <button
                                                                         onClick={(e) => {
                                                                             e.stopPropagation();

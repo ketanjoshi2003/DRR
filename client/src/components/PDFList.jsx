@@ -251,7 +251,7 @@ const PDFList = () => {
                         />
                     </div>
 
-                    {user?.role === 'admin' && (
+                    {(user?.role === 'admin' || user?.role === 'teacher') && (
                         <div className="flex flex-wrap gap-2 items-center w-full md:w-auto">
                             {!isSelectionMode ? (
                                 <>

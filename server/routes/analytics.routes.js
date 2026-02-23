@@ -72,7 +72,7 @@ router.post('/session/update', protect, async (req, res) => {
 // @desc    Get Detailed User Stats
 // @route   GET /api/analytics/user-stats
 // @access  Admin
-router.get('/user-stats', protect, authorize('admin'), async (req, res) => {
+router.get('/user-stats', protect, authorize('admin', 'teacher'), async (req, res) => {
     try {
         const stats = await Session.aggregate([
             {
@@ -144,7 +144,7 @@ router.get('/user-stats', protect, authorize('admin'), async (req, res) => {
 // @desc    Get Admin Analytics
 // @route   GET /api/analytics/stats
 // @access  Admin
-router.get('/stats', protect, authorize('admin'), async (req, res) => {
+router.get('/stats', protect, authorize('admin', 'teacher'), async (req, res) => {
     try {
         const stats = await Session.aggregate([
             {
@@ -203,7 +203,7 @@ router.get('/history', protect, async (req, res) => {
 // @desc    Get System Overview Counts
 // @route   GET /api/analytics/overview
 // @access  Admin
-router.get('/overview', protect, authorize('admin'), async (req, res) => {
+router.get('/overview', protect, authorize('admin', 'teacher'), async (req, res) => {
     try {
         const [userCount, courseCount, subjectCount, pdfCount] = await Promise.all([
             User.countDocuments(),
@@ -231,6 +231,74 @@ router.delete('/reset', protect, authorize('admin'), async (req, res) => {
     try {
         await Session.deleteMany({});
         res.json({ message: 'Analytics data cleared successfully' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server Error', error: error.message });
+    }
+});
+
+// @desc    Get Teacher Analytics (what teachers upload, views, dates, durations)
+// @route   GET /api/analytics/teacher-stats
+// @access  Admin
+router.get('/teacher-stats', protect, authorize('admin'), async (req, res) => {
+    try {
+        // Get all teachers
+        const teachers = await User.find({ role: 'teacher' }).select('-password').lean();
+
+        const teacherStats = await Promise.all(teachers.map(async (teacher) => {
+            // Get all PDFs uploaded by this teacher
+            const uploads = await Pdf.find({ uploadedBy: teacher._id }).lean();
+            const pdfIds = uploads.map(p => p._id);
+
+            // Get all sessions for these PDFs
+            const sessions = await Session.find({ pdfId: { $in: pdfIds } })
+                .populate('userId', 'name email')
+                .sort('-startTime')
+                .lean();
+
+            // Per-material stats
+            const materialStats = uploads.map(pdf => {
+                const pdfSessions = sessions.filter(s => s.pdfId.toString() === pdf._id.toString());
+                const uniqueUsers = [...new Set(pdfSessions.map(s => s.userId?._id?.toString()).filter(Boolean))];
+                const totalDuration = pdfSessions.reduce((sum, s) => sum + (s.totalDuration || 0), 0);
+
+                return {
+                    pdfId: pdf._id,
+                    title: pdf.title,
+                    originalName: pdf.originalName,
+                    courseCode: pdf.courseCode || '',
+                    subjectCode: pdf.subjectCode || '',
+                    uploadDate: pdf.createdAt,
+                    totalSessions: pdfSessions.length,
+                    uniqueReaders: uniqueUsers.length,
+                    totalDuration,
+                    recentSessions: pdfSessions.slice(0, 10).map(s => ({
+                        userName: s.userId?.name || 'Unknown',
+                        userEmail: s.userId?.email || '',
+                        startTime: s.startTime,
+                        endTime: s.endTime,
+                        duration: s.totalDuration || 0
+                    }))
+                };
+            });
+
+            const totalSessions = sessions.length;
+            const totalDuration = sessions.reduce((sum, s) => sum + (s.totalDuration || 0), 0);
+            const uniqueReaders = [...new Set(sessions.map(s => s.userId?._id?.toString()).filter(Boolean))];
+
+            return {
+                teacherId: teacher._id,
+                teacherName: teacher.name,
+                teacherEmail: teacher.email,
+                totalUploads: uploads.length,
+                totalSessions,
+                totalDuration,
+                uniqueReaders: uniqueReaders.length,
+                materials: materialStats
+            };
+        }));
+
+        res.json(teacherStats);
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Server Error', error: error.message });

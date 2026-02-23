@@ -168,7 +168,7 @@ const CourseList = () => {
                 <div className="flex items-center justify-between">
                     <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 tracking-tight">Courses</h1>
                     <div className="md:hidden">
-                        {user?.role === 'admin' && !isDeleteMode && (
+                        {(user?.role === 'admin' || user?.role === 'teacher') && !isDeleteMode && (
                             <button
                                 onClick={() => setIsDeleteMode(true)}
                                 className="p-2 text-red-600 bg-red-50 dark:bg-red-950/20 rounded-lg"
@@ -193,7 +193,7 @@ const CourseList = () => {
                         />
                     </div>
 
-                    {user?.role === 'admin' && (
+                    {(user?.role === 'admin' || user?.role === 'teacher') && (
                         <div className="flex flex-wrap gap-2 items-center w-full md:w-auto">
                             <input
                                 type="file"
@@ -330,7 +330,7 @@ const CourseList = () => {
                                 >
                                     View Subjects
                                 </button>
-                                {user?.role === 'admin' && (
+                                {(user?.role === 'admin' || user?.role === 'teacher') && (
                                     <button
                                         onClick={() => navigate(`/semesters?courseId=${course._id}`)}
                                         className="text-sm text-gray-500 dark:text-gray-400 hover:text-brand-600 dark:hover:text-brand-400 font-medium hover:bg-brand-50 dark:hover:bg-brand-900/20 px-3 py-2 rounded-lg transition-colors"
