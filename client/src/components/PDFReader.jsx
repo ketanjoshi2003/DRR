@@ -739,15 +739,15 @@ const PDFReader = () => {
                 )}
 
                 {selection && (
-                    <div className="fixed bottom-12 left-1/2 transform -translate-x-1/2 bg-white border border-gray-200 rounded-lg p-4 z-[60] w-96 shadow-lg">
+                    <div className="fixed bottom-12 left-1/2 transform -translate-x-1/2 bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-lg p-4 z-[60] w-96 shadow-lg">
                         <div className="flex justify-between items-center mb-3">
-                            <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">New Note</span>
-                            <button onClick={() => { setSelection(null); window.getSelection().removeAllRanges(); }} className="text-gray-400 hover:text-gray-600 transition-colors">
+                            <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">New Note</span>
+                            <button onClick={() => { setSelection(null); window.getSelection().removeAllRanges(); }} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors">
                                 <X className="w-4 h-4" />
                             </button>
                         </div>
-                        <div className="bg-gray-50 rounded p-3 mb-3 border border-gray-100">
-                            <p className="text-xs text-gray-600 italic line-clamp-3">
+                        <div className="bg-gray-50 dark:bg-zinc-800 rounded p-3 mb-3 border border-gray-100 dark:border-zinc-700">
+                            <p className="text-xs text-gray-600 dark:text-gray-300 italic line-clamp-3">
                                 "{selection.text}"
                             </p>
                         </div>
@@ -755,7 +755,7 @@ const PDFReader = () => {
                             value={noteText}
                             onChange={(e) => setNoteText(e.target.value)}
                             placeholder="Type your thoughts..."
-                            className="w-full text-sm bg-white border border-gray-200 rounded-md p-3 mb-3 focus:outline-none focus:border-brand-500 transition-colors resize-none"
+                            className="w-full text-sm bg-white dark:bg-zinc-800 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-zinc-700 rounded-md p-3 mb-3 focus:outline-none focus:border-brand-500 transition-colors resize-none placeholder-gray-400 dark:placeholder-gray-500"
                             rows={3}
                             autoFocus
                         />

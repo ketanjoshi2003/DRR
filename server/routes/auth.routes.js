@@ -154,29 +154,110 @@ router.post('/forgot-password', async (req, res) => {
     try {
         const user = await User.findOne({ email });
         if (!user) {
-            return res.status(404).json({ message: 'User not found' });
+            return res.status(404).json({ message: 'No account found with that email address' });
         }
-        // In a real app, generate a token, save to DB, and send email
-        res.json({ message: 'Password reset link sent to email (Mock)' });
+
+        // Generate reset token
+        const resetToken = user.getResetPasswordToken();
+        await user.save({ validateBeforeSave: false });
+
+        // Build reset URL - use FRONTEND_URL env var or fallback
+        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+        const resetUrl = `${frontendUrl}/reset-password/${resetToken}`;
+
+        // Send email
+        const nodemailer = require('nodemailer');
+
+        const transporter = nodemailer.createTransport({
+            host: process.env.SMTP_HOST || 'smtp.gmail.com',
+            port: parseInt(process.env.SMTP_PORT || '587'),
+            secure: process.env.SMTP_SECURE === 'true',
+            auth: {
+                user: process.env.SMTP_USER,
+                pass: process.env.SMTP_PASS
+            }
+        });
+
+        const mailOptions = {
+            from: `"Digital Room Reader" <${process.env.SMTP_USER || 'noreply@drr.com'}>`,
+            to: user.email,
+            subject: 'Password Reset Request - Digital Room Reader',
+            html: `
+                <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background: #f9fafb; border-radius: 12px; overflow: hidden;">
+                    <div style="background: linear-gradient(135deg, #6366f1, #8b5cf6); padding: 32px; text-align: center;">
+                        <h1 style="color: white; margin: 0; font-size: 24px;">🔒 Password Reset</h1>
+                        <p style="color: rgba(255,255,255,0.85); margin-top: 8px;">Digital Room Reader</p>
+                    </div>
+                    <div style="padding: 32px;">
+                        <p style="color: #374151; font-size: 16px;">Hi <strong>${user.name}</strong>,</p>
+                        <p style="color: #6b7280; font-size: 15px; line-height: 1.6;">
+                            We received a request to reset your password. Click the button below to create a new password. This link will expire in <strong>15 minutes</strong>.
+                        </p>
+                        <div style="text-align: center; margin: 32px 0;">
+                            <a href="${resetUrl}" style="background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 16px; display: inline-block;">
+                                Reset Password
+                            </a>
+                        </div>
+                        <p style="color: #9ca3af; font-size: 13px; line-height: 1.5;">
+                            If you didn't request this, you can safely ignore this email. Your password won't change.
+                        </p>
+                        <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;" />
+                        <p style="color: #9ca3af; font-size: 12px;">
+                            If the button doesn't work, copy and paste this link into your browser:<br/>
+                            <a href="${resetUrl}" style="color: #6366f1; word-break: break-all;">${resetUrl}</a>
+                        </p>
+                    </div>
+                </div>
+            `
+        };
+
+        await transporter.sendMail(mailOptions);
+
+        res.json({ message: 'Password reset link has been sent to your email address' });
     } catch (error) {
-        res.status(500).json({ message: 'Server error', error: error.message });
+        // If email fails, clean up the token
+        const user = await User.findOne({ email });
+        if (user) {
+            user.resetPasswordToken = undefined;
+            user.resetPasswordExpires = undefined;
+            await user.save({ validateBeforeSave: false });
+        }
+        console.error('Forgot password error:', error);
+        res.status(500).json({ message: 'Failed to send reset email. Please try again later.' });
     }
 });
 
-// @desc    Reset password
-// @route   POST /api/auth/reset-password
+// @desc    Reset password with token
+// @route   POST /api/auth/reset-password/:token
 // @access  Public
-router.post('/reset-password', async (req, res) => {
-    const { token, password } = req.body;
+router.post('/reset-password/:token', async (req, res) => {
+    const { password } = req.body;
     try {
-        // Mocking token validation
-        if (token === 'valid_token') {
-            // find user by token and update password
-            res.json({ message: 'Password updated successfully' });
-        } else {
-            res.status(400).json({ message: 'Invalid or expired token' });
+        // Hash the token from URL to compare with stored hash
+        const crypto = require('crypto');
+        const resetPasswordToken = crypto
+            .createHash('sha256')
+            .update(req.params.token)
+            .digest('hex');
+
+        const user = await User.findOne({
+            resetPasswordToken,
+            resetPasswordExpires: { $gt: Date.now() }
+        });
+
+        if (!user) {
+            return res.status(400).json({ message: 'Invalid or expired reset token. Please request a new password reset.' });
         }
+
+        // Set new password
+        user.password = password;
+        user.resetPasswordToken = undefined;
+        user.resetPasswordExpires = undefined;
+        await user.save();
+
+        res.json({ message: 'Password has been reset successfully. You can now log in with your new password.' });
     } catch (error) {
+        console.error('Reset password error:', error);
         res.status(500).json({ message: 'Server error', error: error.message });
     }
 });
