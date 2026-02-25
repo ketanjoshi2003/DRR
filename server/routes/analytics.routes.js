@@ -5,6 +5,7 @@ const Pdf = require('../models/Pdf');
 const User = require('../models/User');
 const Course = require('../models/Course');
 const Subject = require('../models/Subject');
+const Note = require('../models/Note');
 const { protect, authorize } = require('../middleware/auth.middleware');
 
 // @desc    Start unique reading session
@@ -123,6 +124,8 @@ router.get('/user-stats', protect, authorize('admin', 'teacher'), async (req, re
                     userEmail: { $ifNull: ['$user.email', 'N/A'] },
                     pdfTitle: { $ifNull: ['$pdf.title', 'Unknown PDF'] },
                     pdfFilename: { $ifNull: ['$pdf.filename', 'unknown.pdf'] },
+                    courseCode: { $ifNull: ['$pdf.courseCode', ''] },
+                    subjectCode: { $ifNull: ['$pdf.subjectCode', ''] },
                     totalSessions: 1,
                     totalDuration: 1,
                     lastAccess: 1,
@@ -173,6 +176,8 @@ router.get('/stats', protect, authorize('admin', 'teacher'), async (req, res) =>
                 $project: {
                     title: { $ifNull: ['$pdf.title', 'Unknown PDF'] },
                     filename: { $ifNull: ['$pdf.filename', 'unknown.pdf'] },
+                    courseCode: { $ifNull: ['$pdf.courseCode', ''] },
+                    subjectCode: { $ifNull: ['$pdf.subjectCode', ''] },
                     totalSessions: 1,
                     totalDuration: 1,
                     uniqueUsersCount: { $size: '$uniqueUsers' }
@@ -197,6 +202,23 @@ router.get('/history', protect, async (req, res) => {
             .sort('-startTime');
         res.json(sessions);
     } catch (error) {
+        res.status(500).json({ message: 'Server Error', error: error.message });
+    }
+});
+
+// @desc    Get All User Notes for Analytics
+// @route   GET /api/analytics/notes
+// @access  Admin, Teacher
+router.get('/notes', protect, authorize('admin', 'teacher'), async (req, res) => {
+    try {
+        const notes = await Note.find({})
+            .populate('user', 'name email')
+            .populate('pdf', 'title originalName')
+            .sort('-createdAt')
+            .lean();
+        res.json(notes);
+    } catch (error) {
+        console.error(error);
         res.status(500).json({ message: 'Server Error', error: error.message });
     }
 });

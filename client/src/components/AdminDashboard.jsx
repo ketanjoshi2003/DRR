@@ -21,6 +21,9 @@ const AdminDashboard = ({ tab = 'upload' }) => {
     const [manageData, setManageData] = useState([]); // List of users or pdfs for management table
     const [loadingManage, setLoadingManage] = useState(false);
 
+    // Notes analytics state
+    const [notesData, setNotesData] = useState([]);
+
     // Teacher analytics state
     const [teacherStats, setTeacherStats] = useState([]);
     const [loadingTeacherStats, setLoadingTeacherStats] = useState(false);
@@ -29,6 +32,9 @@ const AdminDashboard = ({ tab = 'upload' }) => {
     const [teacherSearch, setTeacherSearch] = useState('');
     const [analyticsView, setAnalyticsView] = useState('students');
     const [uploadSubTab, setUploadSubTab] = useState('files'); // 'files' or 'csv'
+    const [showStudentReportMenu, setShowStudentReportMenu] = useState(false);
+    const [showTeacherReportMenu, setShowTeacherReportMenu] = useState(false);
+    const [generatingPdf, setGeneratingPdf] = useState(false);
 
     useEffect(() => {
         if (tab === 'analytics') {
@@ -38,6 +44,16 @@ const AdminDashboard = ({ tab = 'upload' }) => {
             }
         }
     }, [tab]);
+
+    // Close report dropdown menus on outside click
+    useEffect(() => {
+        const handleClickOutside = () => {
+            setShowStudentReportMenu(false);
+            setShowTeacherReportMenu(false);
+        };
+        document.addEventListener('click', handleClickOutside);
+        return () => document.removeEventListener('click', handleClickOutside);
+    }, []);
 
     const fetchTeacherStats = async () => {
         setLoadingTeacherStats(true);
@@ -57,9 +73,11 @@ const AdminDashboard = ({ tab = 'upload' }) => {
             const { data } = await api.get('/analytics/stats');
             const { data: userData } = await api.get('/analytics/user-stats');
             const { data: overviewData } = await api.get('/analytics/overview');
+            const { data: notesResp } = await api.get('/analytics/notes');
             setStats(data);
             setUserStats(userData);
             setOverviewStats(overviewData);
+            setNotesData(notesResp);
         } catch (error) {
             console.error('Error fetching stats:', error);
         } finally {
@@ -204,6 +222,50 @@ const AdminDashboard = ({ tab = 'upload' }) => {
         });
 
         downloadCSV(csv, `teacher-analytics-report-${new Date().toISOString().slice(0, 10)}.csv`);
+    };
+
+    const generateStudentPdfReport = async () => {
+        setGeneratingPdf(true);
+        setShowStudentReportMenu(false);
+        try {
+            const response = await api.get('/reports/student-pdf', { responseType: 'blob' });
+            const blob = new Blob([response.data], { type: 'application/pdf' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `student-analytics-report-${new Date().toISOString().slice(0, 10)}.pdf`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        } catch (error) {
+            console.error('PDF generation error:', error);
+            alert('Failed to generate PDF report');
+        } finally {
+            setGeneratingPdf(false);
+        }
+    };
+
+    const generateTeacherPdfReport = async () => {
+        setGeneratingPdf(true);
+        setShowTeacherReportMenu(false);
+        try {
+            const response = await api.get('/reports/teacher-pdf', { responseType: 'blob' });
+            const blob = new Blob([response.data], { type: 'application/pdf' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `teacher-analytics-report-${new Date().toISOString().slice(0, 10)}.pdf`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        } catch (error) {
+            console.error('PDF generation error:', error);
+            alert('Failed to generate PDF report');
+        } finally {
+            setGeneratingPdf(false);
+        }
     };
 
     return (
@@ -431,14 +493,35 @@ const AdminDashboard = ({ tab = 'upload' }) => {
                         <div className="flex items-center justify-between mb-3">
                             <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Reading Analytics</h2>
                             <div className="flex items-center gap-2">
-                                <button
-                                    onClick={generateStudentReport}
-                                    disabled={loadingStats || (stats.length === 0 && userStats.length === 0)}
-                                    className="flex items-center gap-2 px-3 py-1.5 text-xs font-semibold text-brand-600 dark:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-950/20 border border-brand-200 dark:border-brand-900/50 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                                >
-                                    <Download className="w-3.5 h-3.5" />
-                                    Download Report
-                                </button>
+                                <div className="relative">
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); setShowStudentReportMenu(!showStudentReportMenu); }}
+                                        disabled={loadingStats || generatingPdf || (stats.length === 0 && userStats.length === 0)}
+                                        className="flex items-center gap-2 px-3 py-1.5 text-xs font-semibold text-brand-600 dark:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-950/20 border border-brand-200 dark:border-brand-900/50 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                                    >
+                                        <Download className="w-3.5 h-3.5" />
+                                        {generatingPdf ? 'Generating...' : 'Download Report'}
+                                        <ChevronDown className="w-3 h-3" />
+                                    </button>
+                                    {showStudentReportMenu && (
+                                        <div className="absolute right-0 mt-1 w-44 bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-lg shadow-lg z-20 overflow-hidden animate-in fade-in slide-in-from-top-1 duration-150">
+                                            <button
+                                                onClick={() => { generateStudentReport(); setShowStudentReportMenu(false); }}
+                                                className="w-full px-4 py-2.5 text-left text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-zinc-800 flex items-center gap-2 transition-colors"
+                                            >
+                                                <FileText className="w-3.5 h-3.5 text-green-600" />
+                                                Download CSV
+                                            </button>
+                                            <button
+                                                onClick={generateStudentPdfReport}
+                                                className="w-full px-4 py-2.5 text-left text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-zinc-800 flex items-center gap-2 transition-colors border-t border-gray-100 dark:border-zinc-800"
+                                            >
+                                                <FileText className="w-3.5 h-3.5 text-red-500" />
+                                                Download PDF
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
                                 <button
                                     onClick={handleResetAnalytics}
                                     className="flex items-center gap-2 px-3 py-1.5 text-xs font-semibold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20 border border-red-200 dark:border-red-900/50 rounded-lg transition-colors"
@@ -508,7 +591,13 @@ const AdminDashboard = ({ tab = 'upload' }) => {
                                                             onClick={() => setSelectedPdfId(selectedPdfId === stat._id ? null : stat._id)}
                                                         >
                                                             <td className={`px-6 py-4 text-sm font-medium break-words max-w-xs ${selectedPdfId === stat._id ? 'text-brand-700 dark:text-brand-400' : 'text-gray-900 dark:text-gray-100'}`}>
-                                                                {stat.title}
+                                                                <div className="mb-0.5">{stat.title}</div>
+                                                                {(stat.courseCode || stat.subjectCode) && (
+                                                                    <div className="flex gap-1 flex-wrap">
+                                                                        {stat.courseCode && <span className="text-[10px] bg-gray-100 dark:bg-zinc-800 text-gray-600 dark:text-gray-400 px-1.5 py-0.5 rounded border border-gray-200 dark:border-zinc-700">{stat.courseCode}</span>}
+                                                                        {stat.subjectCode && <span className="text-[10px] bg-gray-100 dark:bg-zinc-800 text-gray-600 dark:text-gray-400 px-1.5 py-0.5 rounded border border-gray-200 dark:border-zinc-700">{stat.subjectCode}</span>}
+                                                                    </div>
+                                                                )}
                                                             </td>
                                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{stat.totalSessions}</td>
                                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{(stat.totalDuration / 60).toFixed(1)}m</td>
@@ -583,7 +672,15 @@ const AdminDashboard = ({ tab = 'upload' }) => {
                                                                 </div>
                                                                 <div className="text-xs text-gray-400 dark:text-gray-500 break-words font-normal">{stat.userEmail}</div>
                                                             </td>
-                                                            <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 break-words max-w-[150px]">{stat.pdfTitle}</td>
+                                                            <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 break-words max-w-[150px]">
+                                                                <div className="font-medium text-gray-700 dark:text-gray-300 mb-0.5">{stat.pdfTitle}</div>
+                                                                {(stat.courseCode || stat.subjectCode) && (
+                                                                    <div className="flex gap-1 flex-wrap mt-1">
+                                                                        {stat.courseCode && <span className="text-[10px] bg-gray-100 dark:bg-zinc-800 text-gray-600 dark:text-gray-400 px-1.5 py-0.5 rounded border border-gray-200 dark:border-zinc-700">{stat.courseCode}</span>}
+                                                                        {stat.subjectCode && <span className="text-[10px] bg-gray-100 dark:bg-zinc-800 text-gray-600 dark:text-gray-400 px-1.5 py-0.5 rounded border border-gray-200 dark:border-zinc-700">{stat.subjectCode}</span>}
+                                                                    </div>
+                                                                )}
+                                                            </td>
                                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                                                                 {(stat.totalDuration / 60).toFixed(1)}m
                                                             </td>
@@ -600,6 +697,58 @@ const AdminDashboard = ({ tab = 'upload' }) => {
                                 </div>
                             </div>
                         )}
+
+                        {/* User Notes Section (Appended below User Activity) */}
+                        <div className="mt-8">
+                            <div className="flex items-center justify-between mb-4">
+                                <div>
+                                    <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">User Notes</h2>
+                                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">View highlights and notes made by users in documents</p>
+                                </div>
+                            </div>
+                            <div className="overflow-x-auto bg-white dark:bg-zinc-900 rounded-lg border border-gray-200 dark:border-zinc-800 shadow-sm">
+                                <table className="min-w-full divide-y divide-gray-200 dark:divide-zinc-800 text-left">
+                                    <thead className="bg-gray-50 dark:bg-zinc-950">
+                                        <tr>
+                                            <th className="px-6 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">User</th>
+                                            <th className="px-6 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Document (Page)</th>
+                                            <th className="px-6 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Note Content</th>
+                                            <th className="px-6 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Time</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="bg-white dark:bg-zinc-900 divide-y divide-gray-200 dark:divide-zinc-800">
+                                        {notesData.map((note) => (
+                                            <tr key={note._id} className="hover:bg-gray-50 dark:hover:bg-zinc-950 transition-colors">
+                                                <td className="px-6 py-4 text-sm font-medium text-gray-900 dark:text-gray-100 align-top max-w-[150px] break-words">
+                                                    <div>{note.user?.name || 'Unknown User'}</div>
+                                                    <div className="text-xs text-brand-600 dark:text-brand-400 font-normal">{note.user?.email || 'No email'}</div>
+                                                </td>
+                                                <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 max-w-[200px] truncate align-top" title={note.pdf?.title || note.pdf?.originalName}>
+                                                    <span className="font-semibold text-gray-800 dark:text-gray-200">{note.pdf?.title || note.pdf?.originalName || 'Unknown Document'}</span>
+                                                    <div className="text-xs mt-1 bg-gray-100 dark:bg-zinc-800 inline-block px-2 rounded-full border border-gray-200 dark:border-zinc-700">Page {note.pageNumber}</div>
+                                                </td>
+                                                <td className="px-6 py-4 text-sm max-w-md min-w-[300px] align-top">
+                                                    <div className="font-medium text-gray-900 dark:text-gray-100 mb-2">{note.noteContent}</div>
+                                                    <div className="text-xs text-gray-600 dark:text-gray-400 italic bg-gray-50 dark:bg-zinc-950 p-2 rounded-md border-l-4" style={{ borderLeftColor: note.color || '#ffff00' }}>
+                                                        "{note.selectedText}"
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 align-top">
+                                                    {new Date(note.createdAt).toLocaleDateString()}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                        {notesData.length === 0 && (
+                                            <tr>
+                                                <td colSpan="4" className="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
+                                                    No notes recorded yet.
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
                     </>)}
 
                     {analyticsView === 'teachers' && user?.role === 'admin' && (
@@ -611,14 +760,35 @@ const AdminDashboard = ({ tab = 'upload' }) => {
                                     <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Teacher Activity</h2>
                                     <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Track teacher uploads, views, and engagement</p>
                                 </div>
-                                <button
-                                    onClick={generateTeacherReport}
-                                    disabled={loadingTeacherStats || teacherStats.length === 0}
-                                    className="flex items-center gap-2 px-3 py-1.5 text-xs font-semibold text-brand-600 dark:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-950/20 border border-brand-200 dark:border-brand-900/50 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                                >
-                                    <Download className="w-3.5 h-3.5" />
-                                    Download Report
-                                </button>
+                                <div className="relative">
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); setShowTeacherReportMenu(!showTeacherReportMenu); }}
+                                        disabled={loadingTeacherStats || generatingPdf || teacherStats.length === 0}
+                                        className="flex items-center gap-2 px-3 py-1.5 text-xs font-semibold text-brand-600 dark:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-950/20 border border-brand-200 dark:border-brand-900/50 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                                    >
+                                        <Download className="w-3.5 h-3.5" />
+                                        {generatingPdf ? 'Generating...' : 'Download Report'}
+                                        <ChevronDown className="w-3 h-3" />
+                                    </button>
+                                    {showTeacherReportMenu && (
+                                        <div className="absolute right-0 mt-1 w-44 bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-lg shadow-lg z-20 overflow-hidden animate-in fade-in slide-in-from-top-1 duration-150">
+                                            <button
+                                                onClick={() => { generateTeacherReport(); setShowTeacherReportMenu(false); }}
+                                                className="w-full px-4 py-2.5 text-left text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-zinc-800 flex items-center gap-2 transition-colors"
+                                            >
+                                                <FileText className="w-3.5 h-3.5 text-green-600" />
+                                                Download CSV
+                                            </button>
+                                            <button
+                                                onClick={generateTeacherPdfReport}
+                                                className="w-full px-4 py-2.5 text-left text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-zinc-800 flex items-center gap-2 transition-colors border-t border-gray-100 dark:border-zinc-800"
+                                            >
+                                                <FileText className="w-3.5 h-3.5 text-red-500" />
+                                                Download PDF
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
 
                             {/* Search */}
@@ -791,6 +961,7 @@ const AdminDashboard = ({ tab = 'upload' }) => {
                             )}
                         </div>
                     )}
+
                 </div>
             )}
         </div>

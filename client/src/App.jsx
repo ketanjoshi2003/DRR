@@ -14,6 +14,7 @@ import SubjectList from './components/SubjectList';
 import ImageViewer from './components/ImageViewer';
 import DocViewer from './components/DocViewer';
 import MyCollection from './components/MyCollection';
+import EmailSender from './components/EmailSender';
 
 const PrivateRoute = ({ children, adminOnly = false, staffOnly = false }) => {
   const { user, loading } = useAuth();
@@ -88,6 +89,11 @@ function AppRoutes() {
         <Route path="/analytics" element={
           <PrivateRoute staffOnly>
             <AdminDashboard tab="analytics" />
+          </PrivateRoute>
+        } />
+        <Route path="/notifications" element={
+          <PrivateRoute staffOnly>
+            <EmailSender />
           </PrivateRoute>
         } />
       </Route>

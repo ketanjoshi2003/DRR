@@ -30,7 +30,8 @@ app.use('/api/subjects', require('./routes/subject.routes'));
 app.use('/api/pdfs', require('./routes/pdf.routes'));
 app.use('/api/notes', require('./routes/note.routes'));
 app.use('/api/analytics', require('./routes/analytics.routes'));
-app.use('/api/collection', require('./routes/collection.routes'));
+app.use('/api/reports', require('./routes/report.routes'));
+app.use('/api/emails', require('./routes/email.routes'));
 app.get('/', (req, res) => {
     res.send('Digital Room Reader API is running');
 });
@@ -45,3 +46,7 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
+
+// Initialize default cron-based email notifications
+const { initCronJobs } = require('./utils/defaultNotifications');
+initCronJobs();

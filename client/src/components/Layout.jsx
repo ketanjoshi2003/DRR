@@ -1,14 +1,16 @@
 import { useState, useEffect } from 'react';
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { BookOpen, LogOut, Upload, BarChart, Book, GraduationCap, LayoutGrid, Menu, X, Moon, Sun, Bookmark, ChevronRight } from 'lucide-react';
+import { BookOpen, LogOut, Upload, BarChart, Book, GraduationCap, LayoutGrid, Menu, X, Moon, Sun, Bookmark, ChevronRight, MessageSquare, ShieldAlert, Send } from 'lucide-react';
+import api from '../api/axios';
 
 const Layout = () => {
     const { user, logout, isDarkMode, toggleTheme } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
-    const [isCollapsed, setIsCollapsed] = useState(false);
+    const [isCollapsed, setIsCollapsed] = useState(true);
     const [isMobileOpen, setIsMobileOpen] = useState(false);
+    // Remove unread count fetch logic
 
     // Close mobile sidebar on route change
 
@@ -31,20 +33,22 @@ const Layout = () => {
 
     const adminItems = [
         { to: "/upload", icon: Upload, label: "Upload" },
-        { to: "/analytics", icon: BarChart, label: "Analytics" }
+        { to: "/analytics", icon: BarChart, label: "Analytics" },
+        { to: "/notifications", icon: Send, label: "Notifications" }
     ];
 
     const SidebarContent = () => (
         <div className="flex flex-col h-full bg-white dark:bg-zinc-950 border-r border-gray-200 dark:border-zinc-800 transition-colors duration-150">
             <div className="flex-1 overflow-y-auto pt-4">
                 <div className={`mb-6 flex items-center ${isCollapsed && !isMobileOpen ? 'justify-center' : 'px-6'}`}>
-                    <div className="flex items-center gap-3">
-                        <div className="p-2 bg-brand-600 rounded-lg shadow-lg shadow-brand-500/20">
-                            <BookOpen className="w-5 h-5 text-white" />
-                        </div>
+                    <div
+                        className="flex items-center gap-3 cursor-pointer"
+                        onClick={() => setIsCollapsed(!isCollapsed)}
+                    >
+                        <img src="/logo.png" alt="DRR Logo" className="w-8 h-8 object-contain" />
                         {(!isCollapsed || isMobileOpen) && (
-                            <span className="text-xl font-bold bg-gradient-to-r from-brand-600 to-brand-400 bg-clip-text text-transparent">
-                                DRR
+                            <span className="text-xl font-bold text-brand-600 dark:text-brand-400">
+                                GUNI Lib
                             </span>
                         )}
                     </div>
@@ -66,7 +70,12 @@ const Layout = () => {
                         >
                             <item.icon className={`w-5 h-5 shrink-0 ${!isCollapsed || isMobileOpen ? 'mr-3' : ''} ${isCollapsed && !isMobileOpen ? '' : 'transition-transform group-hover:scale-110'}`} />
                             {(!isCollapsed || isMobileOpen) && <span>{item.label}</span>}
-                            {!isCollapsed && (
+                            {item.badge > 0 && (
+                                <span className={`ml-auto bg-brand-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full ${isCollapsed && !isMobileOpen ? 'absolute top-0 right-0' : ''}`}>
+                                    {item.badge}
+                                </span>
+                            )}
+                            {!isCollapsed && !item.badge && (
                                 <div className={`ml-auto w-1.5 h-1.5 rounded-full bg-brand-600 transition-opacity duration-200 ${location.pathname === item.to ? 'opacity-100' : 'opacity-0'}`} />
                             )}
                         </NavLink>
@@ -139,13 +148,11 @@ const Layout = () => {
     return (
         <div className="h-screen bg-white dark:bg-black flex font-sans overflow-hidden transition-colors duration-150">
             {/* Mobile Header */}
-            <header className="md:hidden fixed top-0 left-0 right-0 h-14 bg-white/80 dark:bg-black/80 backdrop-blur-md border-b border-gray-200/50 dark:border-zinc-800/50 z-30 px-4 flex items-center justify-between transition-colors duration-150">
+            <header className="md:hidden fixed top-0 left-0 right-0 h-14 bg-white dark:bg-black border-b border-gray-200/50 dark:border-zinc-800/50 z-30 px-4 flex items-center justify-between transition-colors duration-150">
                 <div className="flex items-center gap-2">
-                    <div className="p-1.5 bg-brand-600 rounded-lg shadow-lg shadow-brand-500/20">
-                        <BookOpen className="w-4 h-4 text-white" />
-                    </div>
-                    <span className="text-lg font-bold bg-gradient-to-r from-brand-600 to-brand-400 bg-clip-text text-transparent tracking-tight">
-                        DRR
+                    <img src="/logo.png" alt="DRR Logo" className="h-6 w-auto object-contain" />
+                    <span className="text-lg font-bold tracking-tight text-brand-600 dark:text-brand-400">
+                        GUNI Lib
                     </span>
                 </div>
 
@@ -190,7 +197,7 @@ const Layout = () => {
             </main>
 
             {/* Mobile Bottom Navigation - SLEEK & MODERN */}
-            <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/80 dark:bg-black/80 backdrop-blur-xl border-t border-gray-200/50 dark:border-zinc-800/50 px-2 pb-safe-area-inset-bottom">
+            <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white dark:bg-black border-t border-gray-200/50 dark:border-zinc-800/50 px-2 pb-safe-area-inset-bottom">
                 <div className="flex items-center justify-around h-16">
                     {navItems.map((item) => {
                         const isActive = location.pathname === item.to;

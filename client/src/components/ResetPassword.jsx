@@ -61,8 +61,8 @@ const ResetPassword = () => {
     return (
         <div className="min-h-screen bg-gray-50 dark:bg-black flex flex-col justify-center py-12 sm:px-6 lg:px-8 animate-fade-in transition-colors duration-150">
             <div className="sm:mx-auto sm:w-full sm:max-w-md">
-                <div className="flex justify-center">
-                    <BookOpen className="w-12 h-12 text-brand-600" />
+                <div className="flex justify-center mt-4">
+                    <img src="/logo.png" alt="DRR Logo" className="h-16 w-auto object-contain" />
                 </div>
                 <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900 dark:text-gray-100">
                     Reset your password
@@ -142,16 +142,16 @@ const ResetPassword = () => {
                                                 <div
                                                     key={i}
                                                     className={`h-1.5 flex-1 rounded-full transition-all duration-300 ${i <= strength.level
-                                                            ? strength.color
-                                                            : 'bg-gray-200 dark:bg-zinc-800'
+                                                        ? strength.color
+                                                        : 'bg-gray-200 dark:bg-zinc-800'
                                                         }`}
                                                 />
                                             ))}
                                         </div>
                                         <p className={`text-xs ${strength.label === 'Weak' ? 'text-red-500' :
-                                                strength.label === 'Fair' ? 'text-yellow-500' :
-                                                    strength.label === 'Good' ? 'text-blue-500' :
-                                                        'text-green-500'
+                                            strength.label === 'Fair' ? 'text-yellow-500' :
+                                                strength.label === 'Good' ? 'text-blue-500' :
+                                                    'text-green-500'
                                             }`}>
                                             {strength.label} password
                                         </p>
@@ -177,10 +177,10 @@ const ResetPassword = () => {
                                         onChange={(e) => setConfirmPassword(e.target.value)}
                                         placeholder="Confirm new password"
                                         className={`appearance-none block w-full pl-10 pr-10 py-2.5 border rounded-lg shadow-sm placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-zinc-900 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-brand-500 focus:border-brand-500 sm:text-sm transition-all ${confirmPassword && confirmPassword !== password
-                                                ? 'border-red-300 dark:border-red-900'
-                                                : confirmPassword && confirmPassword === password
-                                                    ? 'border-green-300 dark:border-green-900'
-                                                    : 'border-gray-300 dark:border-zinc-800'
+                                            ? 'border-red-300 dark:border-red-900'
+                                            : confirmPassword && confirmPassword === password
+                                                ? 'border-green-300 dark:border-green-900'
+                                                : 'border-gray-300 dark:border-zinc-800'
                                             }`}
                                     />
                                     <button

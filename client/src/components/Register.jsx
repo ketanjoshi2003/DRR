@@ -29,8 +29,8 @@ const Register = () => {
     return (
         <div className="min-h-screen bg-gray-50 dark:bg-black flex flex-col justify-center py-12 sm:px-6 lg:px-8 animate-fade-in transition-colors duration-150">
             <div className="sm:mx-auto sm:w-full sm:max-w-md">
-                <div className="flex justify-center">
-                    <BookOpen className="w-12 h-12 text-brand-600" />
+                <div className="flex justify-center mt-4">
+                    <img src="/logo.png" alt="DRR Logo" className="h-16 w-auto object-contain" />
                 </div>
                 <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900 dark:text-gray-100 transition-colors">
                     Create your account
