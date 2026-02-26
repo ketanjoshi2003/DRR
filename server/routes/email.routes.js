@@ -16,7 +16,13 @@ router.post('/send', protect, authorize('admin', 'teacher'), async (req, res) =>
         }
 
         let query = {};
-        if (req.user.role === 'teacher') {
+        if (targetGroup === 'inactive') {
+            const inactiveUserIds = req.body.inactiveUserIds;
+            if (!inactiveUserIds || !Array.isArray(inactiveUserIds)) {
+                return res.status(400).json({ message: 'Inactive user IDs are required.' });
+            }
+            query = { _id: { $in: inactiveUserIds } };
+        } else if (req.user.role === 'teacher') {
             if (targetGroup !== 'readers' && targetGroup !== 'students') {
                 return res.status(403).json({ message: 'Teachers can only email students.' });
             }

@@ -259,6 +259,40 @@ router.delete('/reset', protect, authorize('admin'), async (req, res) => {
     }
 });
 
+// @desc    Get Inactive Users for specific material/subject/course
+// @route   GET /api/analytics/inactive-users
+// @access  Admin, Teacher
+router.get('/inactive-users', protect, authorize('admin', 'teacher'), async (req, res) => {
+    try {
+        const { courseCode, subjectCode, pdfId } = req.query;
+        let pdfQuery = {};
+        if (pdfId) pdfQuery._id = pdfId;
+        else if (subjectCode) pdfQuery.subjectCode = subjectCode;
+        else if (courseCode) pdfQuery.courseCode = courseCode;
+
+        if (Object.keys(pdfQuery).length === 0) {
+            return res.status(400).json({ message: 'Must provide courseCode, subjectCode, or pdfId' });
+        }
+
+        const pdfs = await Pdf.find(pdfQuery).select('_id');
+        const pdfIds = pdfs.map(p => p._id);
+
+        const sessions = await Session.find({ pdfId: { $in: pdfIds } }).select('userId');
+        const activeUserIds = sessions.map(s => s.userId.toString());
+
+        let userQuery = { role: 'reader' };
+        const inactiveUsers = await User.find({
+            ...userQuery,
+            _id: { $nin: activeUserIds }
+        }).select('name email');
+
+        res.json(inactiveUsers);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server Error', error: error.message });
+    }
+});
+
 // @desc    Get Teacher Analytics (what teachers upload, views, dates, durations)
 // @route   GET /api/analytics/teacher-stats
 // @access  Admin
