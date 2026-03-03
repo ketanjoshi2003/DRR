@@ -32,8 +32,6 @@ const AdminDashboard = ({ tab = 'upload' }) => {
     const [teacherSearch, setTeacherSearch] = useState('');
     const [analyticsView, setAnalyticsView] = useState('students');
     const [uploadSubTab, setUploadSubTab] = useState('files'); // 'files' or 'csv'
-    const [showStudentReportMenu, setShowStudentReportMenu] = useState(false);
-    const [showTeacherReportMenu, setShowTeacherReportMenu] = useState(false);
     const [generatingPdf, setGeneratingPdf] = useState(false);
 
     useEffect(() => {
@@ -44,16 +42,6 @@ const AdminDashboard = ({ tab = 'upload' }) => {
             }
         }
     }, [tab]);
-
-    // Close report dropdown menus on outside click
-    useEffect(() => {
-        const handleClickOutside = () => {
-            setShowStudentReportMenu(false);
-            setShowTeacherReportMenu(false);
-        };
-        document.addEventListener('click', handleClickOutside);
-        return () => document.removeEventListener('click', handleClickOutside);
-    }, []);
 
     const fetchTeacherStats = async () => {
         setLoadingTeacherStats(true);
@@ -145,88 +133,8 @@ const AdminDashboard = ({ tab = 'upload' }) => {
 
 
     // --- Report generation helpers ---
-    const downloadCSV = (csvContent, filename) => {
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.setAttribute('download', filename);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-    };
-
-    const escapeCSV = (val) => {
-        if (val === null || val === undefined) return '';
-        const str = String(val);
-        if (str.includes(',') || str.includes('"') || str.includes('\n')) {
-            return `"${str.replace(/"/g, '""')}"`;
-        }
-        return str;
-    };
-
-    const generateStudentReport = () => {
-        const now = new Date().toLocaleString();
-        let csv = '';
-
-        // Overview section
-        csv += 'STUDENT ANALYTICS REPORT\r\n';
-        csv += `Generated on: ${now}\r\n\r\n`;
-        csv += 'OVERVIEW\r\n';
-        csv += `Total Users,${overviewStats.users}\r\n`;
-        csv += `Total Courses,${overviewStats.courses}\r\n`;
-        csv += `Total Subjects,${overviewStats.subjects}\r\n`;
-        csv += `Total PDFs,${overviewStats.pdfs}\r\n\r\n`;
-
-        // File Performance
-        csv += 'FILE PERFORMANCE\r\n';
-        csv += 'PDF Title,Total Sessions,Total Duration (minutes)\r\n';
-        stats.forEach(s => {
-            csv += `${escapeCSV(s.title)},${s.totalSessions},${(s.totalDuration / 60).toFixed(1)}\r\n`;
-        });
-        csv += '\r\n';
-
-        // User Activity
-        csv += 'USER ACTIVITY\r\n';
-        csv += 'User Name,User Email,PDF Title,Duration (minutes)\r\n';
-        userStats.forEach(s => {
-            csv += `${escapeCSV(s.userName)},${escapeCSV(s.userEmail)},${escapeCSV(s.pdfTitle)},${(s.totalDuration / 60).toFixed(1)}\r\n`;
-        });
-
-        downloadCSV(csv, `student-analytics-report-${new Date().toISOString().slice(0, 10)}.csv`);
-    };
-
-    const generateTeacherReport = () => {
-        const now = new Date().toLocaleString();
-        let csv = '';
-
-        csv += 'TEACHER ANALYTICS REPORT\r\n';
-        csv += `Generated on: ${now}\r\n\r\n`;
-
-        // Teacher Summary
-        csv += 'TEACHER SUMMARY\r\n';
-        csv += 'Teacher Name,Email,Total Uploads,Total Sessions,Unique Readers,Total Read Time (minutes)\r\n';
-        teacherStats.forEach(t => {
-            csv += `${escapeCSV(t.teacherName)},${escapeCSV(t.teacherEmail)},${t.totalUploads},${t.totalSessions},${t.uniqueReaders},${(t.totalDuration / 60).toFixed(1)}\r\n`;
-        });
-        csv += '\r\n';
-
-        // Per-teacher material breakdown
-        csv += 'MATERIAL BREAKDOWN\r\n';
-        csv += 'Teacher,Material Title,Course,Subject,Upload Date,Sessions,Unique Readers,Total Duration (minutes)\r\n';
-        teacherStats.forEach(t => {
-            t.materials.forEach(m => {
-                csv += `${escapeCSV(t.teacherName)},${escapeCSV(m.title)},${escapeCSV(m.courseCode)},${escapeCSV(m.subjectCode)},${new Date(m.uploadDate).toLocaleDateString()},${m.totalSessions},${m.uniqueReaders},${(m.totalDuration / 60).toFixed(1)}\r\n`;
-            });
-        });
-
-        downloadCSV(csv, `teacher-analytics-report-${new Date().toISOString().slice(0, 10)}.csv`);
-    };
-
     const generateStudentPdfReport = async () => {
         setGeneratingPdf(true);
-        setShowStudentReportMenu(false);
         try {
             const response = await api.get('/reports/student-pdf', { responseType: 'blob' });
             const blob = new Blob([response.data], { type: 'application/pdf' });
@@ -248,7 +156,6 @@ const AdminDashboard = ({ tab = 'upload' }) => {
 
     const generateTeacherPdfReport = async () => {
         setGeneratingPdf(true);
-        setShowTeacherReportMenu(false);
         try {
             const response = await api.get('/reports/teacher-pdf', { responseType: 'blob' });
             const blob = new Blob([response.data], { type: 'application/pdf' });
@@ -493,34 +400,15 @@ const AdminDashboard = ({ tab = 'upload' }) => {
                         <div className="flex items-center justify-between mb-3">
                             <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Reading Analytics</h2>
                             <div className="flex items-center gap-2">
-                                <div className="relative">
+                                <div>
                                     <button
-                                        onClick={(e) => { e.stopPropagation(); setShowStudentReportMenu(!showStudentReportMenu); }}
+                                        onClick={generateStudentPdfReport}
                                         disabled={loadingStats || generatingPdf || (stats.length === 0 && userStats.length === 0)}
                                         className="flex items-center gap-2 px-3 py-1.5 text-xs font-semibold text-brand-600 dark:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-950/20 border border-brand-200 dark:border-brand-900/50 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                                     >
                                         <Download className="w-3.5 h-3.5" />
                                         {generatingPdf ? 'Generating...' : 'Download Report'}
-                                        <ChevronDown className="w-3 h-3" />
                                     </button>
-                                    {showStudentReportMenu && (
-                                        <div className="absolute right-0 mt-1 w-44 bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-lg shadow-lg z-20 overflow-hidden animate-in fade-in slide-in-from-top-1 duration-150">
-                                            <button
-                                                onClick={() => { generateStudentReport(); setShowStudentReportMenu(false); }}
-                                                className="w-full px-4 py-2.5 text-left text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-zinc-800 flex items-center gap-2 transition-colors"
-                                            >
-                                                <FileText className="w-3.5 h-3.5 text-green-600" />
-                                                Download CSV
-                                            </button>
-                                            <button
-                                                onClick={generateStudentPdfReport}
-                                                className="w-full px-4 py-2.5 text-left text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-zinc-800 flex items-center gap-2 transition-colors border-t border-gray-100 dark:border-zinc-800"
-                                            >
-                                                <FileText className="w-3.5 h-3.5 text-red-500" />
-                                                Download PDF
-                                            </button>
-                                        </div>
-                                    )}
                                 </div>
                                 <button
                                     onClick={handleResetAnalytics}
@@ -760,34 +648,15 @@ const AdminDashboard = ({ tab = 'upload' }) => {
                                     <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Teacher Activity</h2>
                                     <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Track teacher uploads, views, and engagement</p>
                                 </div>
-                                <div className="relative">
+                                <div>
                                     <button
-                                        onClick={(e) => { e.stopPropagation(); setShowTeacherReportMenu(!showTeacherReportMenu); }}
+                                        onClick={generateTeacherPdfReport}
                                         disabled={loadingTeacherStats || generatingPdf || teacherStats.length === 0}
                                         className="flex items-center gap-2 px-3 py-1.5 text-xs font-semibold text-brand-600 dark:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-950/20 border border-brand-200 dark:border-brand-900/50 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                                     >
                                         <Download className="w-3.5 h-3.5" />
                                         {generatingPdf ? 'Generating...' : 'Download Report'}
-                                        <ChevronDown className="w-3 h-3" />
                                     </button>
-                                    {showTeacherReportMenu && (
-                                        <div className="absolute right-0 mt-1 w-44 bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-lg shadow-lg z-20 overflow-hidden animate-in fade-in slide-in-from-top-1 duration-150">
-                                            <button
-                                                onClick={() => { generateTeacherReport(); setShowTeacherReportMenu(false); }}
-                                                className="w-full px-4 py-2.5 text-left text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-zinc-800 flex items-center gap-2 transition-colors"
-                                            >
-                                                <FileText className="w-3.5 h-3.5 text-green-600" />
-                                                Download CSV
-                                            </button>
-                                            <button
-                                                onClick={generateTeacherPdfReport}
-                                                className="w-full px-4 py-2.5 text-left text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-zinc-800 flex items-center gap-2 transition-colors border-t border-gray-100 dark:border-zinc-800"
-                                            >
-                                                <FileText className="w-3.5 h-3.5 text-red-500" />
-                                                Download PDF
-                                            </button>
-                                        </div>
-                                    )}
                                 </div>
                             </div>
 

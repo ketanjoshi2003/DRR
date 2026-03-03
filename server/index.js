@@ -33,7 +33,7 @@ app.use('/api/analytics', require('./routes/analytics.routes'));
 app.use('/api/reports', require('./routes/report.routes'));
 app.use('/api/emails', require('./routes/email.routes'));
 app.get('/', (req, res) => {
-    res.send('Digital Room Reader API is running');
+    res.send('Digital Reading Room API is running');
 });
 
 // Error handling middleware

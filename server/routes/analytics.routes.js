@@ -8,6 +8,14 @@ const Subject = require('../models/Subject');
 const Note = require('../models/Note');
 const { protect, authorize } = require('../middleware/auth.middleware');
 
+const buildPdfScopeQuery = ({ courseCode, subjectCode, pdfId }) => {
+    const query = {};
+    if (pdfId) query._id = pdfId;
+    else if (subjectCode) query.subjectCode = subjectCode;
+    else if (courseCode) query.courseCode = courseCode;
+    return Object.keys(query).length > 0 ? query : null;
+};
+
 // @desc    Start unique reading session
 // @route   POST /api/analytics/session/start
 // @access  Private
@@ -264,29 +272,50 @@ router.delete('/reset', protect, authorize('admin'), async (req, res) => {
 // @access  Admin, Teacher
 router.get('/inactive-users', protect, authorize('admin', 'teacher'), async (req, res) => {
     try {
-        const { courseCode, subjectCode, pdfId } = req.query;
-        let pdfQuery = {};
-        if (pdfId) pdfQuery._id = pdfId;
-        else if (subjectCode) pdfQuery.subjectCode = subjectCode;
-        else if (courseCode) pdfQuery.courseCode = courseCode;
-
-        if (Object.keys(pdfQuery).length === 0) {
+        const pdfQuery = buildPdfScopeQuery(req.query);
+        if (!pdfQuery) {
             return res.status(400).json({ message: 'Must provide courseCode, subjectCode, or pdfId' });
         }
 
-        const pdfs = await Pdf.find(pdfQuery).select('_id');
-        const pdfIds = pdfs.map(p => p._id);
-
-        const sessions = await Session.find({ pdfId: { $in: pdfIds } }).select('userId');
-        const activeUserIds = sessions.map(s => s.userId.toString());
-
-        let userQuery = { role: 'reader' };
+        const pdfIds = await Pdf.find(pdfQuery).distinct('_id');
+        const activeUserIds = await Session.find({ pdfId: { $in: pdfIds } }).distinct('userId');
         const inactiveUsers = await User.find({
-            ...userQuery,
+            role: 'reader',
             _id: { $nin: activeUserIds }
-        }).select('name email');
+        })
+            .select('name email')
+            .sort({ name: 1 });
 
         res.json(inactiveUsers);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server Error', error: error.message });
+    }
+});
+
+// @desc    Get Inactive Teachers for specific material/subject/course
+// @route   GET /api/analytics/inactive-teachers
+// @access  Admin
+router.get('/inactive-teachers', protect, authorize('admin'), async (req, res) => {
+    try {
+        const pdfQuery = buildPdfScopeQuery(req.query);
+        if (!pdfQuery) {
+            return res.status(400).json({ message: 'Must provide courseCode, subjectCode, or pdfId' });
+        }
+
+        const activeTeacherIds = await Pdf.find({
+            ...pdfQuery,
+            uploadedBy: { $exists: true, $ne: null }
+        }).distinct('uploadedBy');
+
+        const inactiveTeachers = await User.find({
+            role: 'teacher',
+            _id: { $nin: activeTeacherIds }
+        })
+            .select('name email')
+            .sort({ name: 1 });
+
+        res.json(inactiveTeachers);
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Server Error', error: error.message });

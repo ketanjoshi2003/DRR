@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <linearGradient id="primary-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3b82f6" />
+      <stop offset="100%" stop-color="#8b5cf6" />
+    </linearGradient>
+    <linearGradient id="secondary-gradient" x1="100%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#06b6d4" />
+      <stop offset="100%" stop-color="#3b82f6" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background Glow -->
+  <circle cx="256" cy="256" r="230" fill="url(#primary-gradient)" opacity="0.1" />
+  
+  <!-- Outer Ring (Digital elements) -->
+  <circle cx="256" cy="256" r="200" fill="none" stroke="url(#secondary-gradient)" stroke-width="8" stroke-dasharray="10 30" stroke-linecap="round" />
+  
+  <!-- Inner Book Structure -->
+  <path d="M256,400 C150,400 100,340 100,280 L100,140 C100,200 150,250 256,250 M256,400 C362,400 412,340 412,280 L412,140 C412,200 362,250 256,250" fill="none" stroke="url(#primary-gradient)" stroke-width="28" stroke-linecap="round" stroke-linejoin="round" />
+  <path d="M256,250 L256,420" fill="none" stroke="url(#primary-gradient)" stroke-width="28" stroke-linecap="round" />
+  
+  <!-- Pages / layers -->
+  <path d="M256,360 C160,360 120,310 120,260 L120,160 C120,210 160,250 256,250 M256,360 C352,360 392,310 392,260 L392,160 C392,210 352,250 256,250" fill="none" stroke="url(#secondary-gradient)" stroke-width="20" stroke-linecap="round" stroke-linejoin="round" />
+  
+  <!-- Top Node (Digital / Idea) -->
+  <circle cx="256" cy="120" r="24" fill="url(#primary-gradient)" />
+  <path d="M256,120 L256,230" fill="none" stroke="url(#primary-gradient)" stroke-width="12" stroke-dasharray="4 8" stroke-linecap="round" />
+</svg>

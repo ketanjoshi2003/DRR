@@ -15,13 +15,29 @@ router.post('/send', protect, authorize('admin', 'teacher'), async (req, res) =>
             return res.status(400).json({ message: 'Target group, subject, and text are required' });
         }
 
+        const isInactiveTarget =
+            targetGroup === 'inactive' ||
+            targetGroup === 'inactive-students' ||
+            targetGroup === 'inactive-teachers';
+
         let query = {};
-        if (targetGroup === 'inactive') {
-            const inactiveUserIds = req.body.inactiveUserIds;
-            if (!inactiveUserIds || !Array.isArray(inactiveUserIds)) {
-                return res.status(400).json({ message: 'Inactive user IDs are required.' });
+        if (isInactiveTarget) {
+            const recipientIds = Array.isArray(req.body.recipientIds)
+                ? req.body.recipientIds
+                : req.body.inactiveUserIds;
+
+            if (!recipientIds || !Array.isArray(recipientIds) || recipientIds.length === 0) {
+                return res.status(400).json({ message: 'Recipient IDs are required for inactive targeting.' });
             }
-            query = { _id: { $in: inactiveUserIds } };
+
+            if (targetGroup === 'inactive-teachers') {
+                if (req.user.role !== 'admin') {
+                    return res.status(403).json({ message: 'Only admins can email inactive teachers.' });
+                }
+                query = { _id: { $in: recipientIds }, role: 'teacher' };
+            } else {
+                query = { _id: { $in: recipientIds }, role: 'reader' };
+            }
         } else if (req.user.role === 'teacher') {
             if (targetGroup !== 'readers' && targetGroup !== 'students') {
                 return res.status(403).json({ message: 'Teachers can only email students.' });

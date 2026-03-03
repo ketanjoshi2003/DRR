@@ -1,5 +1,7 @@
 const express = require('express');
 const router = express.Router();
+const path = require('path');
+const fs = require('fs');
 const PDFDocument = require('pdfkit');
 const Session = require('../models/Session');
 const Pdf = require('../models/Pdf');
@@ -8,6 +10,9 @@ const Course = require('../models/Course');
 const Subject = require('../models/Subject');
 const Note = require('../models/Note');
 const { protect, authorize } = require('../middleware/auth.middleware');
+
+// ─── Logo image (pre-rendered PNG from SVG) ──────────────────────
+const LOGO_PATH = path.join(__dirname, '..', 'assets', 'logo.png');
 
 // ─── Colour palette ───────────────────────────────────────────────
 const BRAND = '#2563EB';   // blue-600
@@ -18,6 +23,7 @@ const LIGHT = '#F3F4F6';   // gray-100
 const WHITE = '#FFFFFF';
 const AMBER = '#D97706';
 const GREEN = '#059669';
+const APP_NAME = 'Digital Reading Room';
 
 // ─── Helpers ──────────────────────────────────────────────────────
 
@@ -49,7 +55,7 @@ const trunc = (str, max = 40) => {
 
 /** Add page number footer */
 const addFooter = (doc) => {
-    const bottom = doc.page.height - 40;
+    const bottom = doc.page.height - doc.page.margins.bottom - 22;
     doc.save()
         .fontSize(8)
         .fillColor(MEDIUM)
@@ -59,6 +65,46 @@ const addFooter = (doc) => {
             bottom,
             { width: doc.page.width - 100, align: 'center' }
         )
+        .restore();
+};
+
+/** Embed the app logo PNG in the PDF.
+ *  Uses a pre-rendered PNG (from client/public/logo.svg) so gradients
+ *  and all visual details are preserved exactly as in the app.
+ */
+const drawAppLogo = (doc, x, y, size = 36) => {
+    try {
+        if (fs.existsSync(LOGO_PATH)) {
+            doc.image(LOGO_PATH, x, y, { width: size, height: size });
+        }
+    } catch (err) {
+        console.warn('Could not embed logo in PDF:', err.message);
+    }
+};
+
+/** Draw common cover header with app branding */
+const drawCoverHeader = (doc, title, bgColor, subtitleColor) => {
+    rect(doc, 0, 0, doc.page.width, 120, bgColor);
+    drawAppLogo(doc, 50, 33, 34);
+
+    const reportDate = new Date().toLocaleDateString('en-IN', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+    });
+
+    doc.save()
+        .font('Helvetica-Bold')
+        .fontSize(11)
+        .fillColor(subtitleColor)
+        .text(APP_NAME, 94, 33, { lineBreak: false })
+        .fontSize(24)
+        .fillColor(WHITE)
+        .text(title, 94, 48, { lineBreak: false })
+        .font('Helvetica')
+        .fontSize(10)
+        .fillColor(subtitleColor)
+        .text(reportDate, 94, 80, { lineBreak: false })
         .restore();
 };
 
@@ -207,17 +253,7 @@ router.get('/student-pdf', protect, authorize('admin', 'teacher'), async (req, r
         doc.pipe(res);
 
         // ── Cover header ────────────────────────────────────────
-        rect(doc, 0, 0, doc.page.width, 120, BRAND);
-        doc.save()
-            .fontSize(26)
-            .font('Helvetica-Bold')
-            .fillColor(WHITE)
-            .text('Student Analytics Report', 50, 35)
-            .fontSize(11)
-            .font('Helvetica')
-            .fillColor('#BFDBFE')
-            .text(`Digital Reading Room — ${new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}`, 50, 70)
-            .restore();
+        drawCoverHeader(doc, 'Student Analytics Report', BRAND, '#BFDBFE');
 
         // ── Overview cards ──────────────────────────────────────
         let y = 140;
@@ -328,7 +364,7 @@ router.get('/student-pdf', protect, authorize('admin', 'teacher'), async (req, r
             doc.save()
                 .fontSize(8)
                 .fillColor(MEDIUM)
-                .text(`Page ${i + 1} of ${pages.count}`, 50, doc.page.height - 28, { width: doc.page.width - 100, align: 'right' })
+                .text(`Page ${i + 1} of ${pages.count}`, 50, doc.page.height - doc.page.margins.bottom - 10, { width: doc.page.width - 100, align: 'right', lineBreak: false })
                 .restore();
         }
 
@@ -400,17 +436,7 @@ router.get('/teacher-pdf', protect, authorize('admin'), async (req, res) => {
         doc.pipe(res);
 
         // ── Cover header ────────────────────────────────────────
-        rect(doc, 0, 0, doc.page.width, 120, AMBER);
-        doc.save()
-            .fontSize(26)
-            .font('Helvetica-Bold')
-            .fillColor(WHITE)
-            .text('Teacher Analytics Report', 50, 35)
-            .fontSize(11)
-            .font('Helvetica')
-            .fillColor('#FEF3C7')
-            .text(`Digital Reading Room — ${new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}`, 50, 70)
-            .restore();
+        drawCoverHeader(doc, 'Teacher Analytics Report', AMBER, '#FEF3C7');
 
         // ── Teacher Summary Table ───────────────────────────────
         let y = 140;
@@ -494,7 +520,7 @@ router.get('/teacher-pdf', protect, authorize('admin'), async (req, res) => {
             doc.save()
                 .fontSize(8)
                 .fillColor(MEDIUM)
-                .text(`Page ${i + 1} of ${pages.count}`, 50, doc.page.height - 28, { width: doc.page.width - 100, align: 'right' })
+                .text(`Page ${i + 1} of ${pages.count}`, 50, doc.page.height - doc.page.margins.bottom - 10, { width: doc.page.width - 100, align: 'right', lineBreak: false })
                 .restore();
         }
 

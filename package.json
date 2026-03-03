@@ -1,7 +1,7 @@
 {
-    "name": "drr-root",
+    "name": "digital-reading-room-root",
     "version": "1.0.0",
-    "description": "Root package for DRR project",
+    "description": "Root package for Digital Reading Room project",
     "scripts": {
         "start:server": "cd server && npm start",
         "start:client": "cd client && npm run dev",

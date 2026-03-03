@@ -2,7 +2,7 @@
 
 ## 4.5 Input Design
 
-Input design is the process of converting user-oriented inputs into a computer-based format. The goal is to make data entry as easy and error-free as possible. In the Digital Room Reader (DRR) project, we have designed several input interfaces to ensure secure and efficient data handling.
+Input design is the process of converting user-oriented inputs into a computer-based format. The goal is to make data entry as easy and error-free as possible. In the Digital Reading Room project, we have designed several input interfaces to ensure secure and efficient data handling.
 
 ### 1. User Authentication Inputs
 The system requires users to register and log in to access the platform.
@@ -28,7 +28,7 @@ Admins have access to specialized input forms for managing the system's content.
 
 ## 4.6 Output Design
 
-Output design is crucial for presenting information to users in an understandable and useful format. The DRR system provides several output views.
+Output design is crucial for presenting information to users in an understandable and useful format. The Digital Reading Room system provides several output views.
 
 ### 1. Dashboard & Document List
 The main output for users is the list of available study materials.
@@ -56,7 +56,7 @@ Users can save documents to their personal collection. The output is a personali
 # Chapter-5 System Testing
 
 ## 5.1 System Testing
-System testing ensures that the complete and integrated software acts in accordance with the specified requirements. We performed meaningful testing on the DRR project to verify its functionality, reliability, and performance.
+System testing ensures that the complete and integrated software acts in accordance with the specified requirements. We performed meaningful testing on the Digital Reading Room project to verify its functionality, reliability, and performance.
 
 ## 5.1.1 Output Testing
 Output testing validates that the system provides the correct results for a given set of inputs.
@@ -125,7 +125,7 @@ Time:        2.07 s
 # Chapter-6 Conclusion & Future Enhancement
 
 ## 6.1 Conclusion
-The "Digital Room Reader" (DRR) project successfully addresses the need for a centralized, digital platform for academic resources. By implementing a robust MERN stack architecture, we have created a system that allows:
+The "Digital Reading Room" project successfully addresses the need for a centralized, digital platform for academic resources. By implementing a robust MERN stack architecture, we have created a system that allows:
 - **Secure Access**: User authentication and role-based access control.
 - **Efficient Management**: Admin tools for organizing content by Course, Semester, and Subject.
 - **Easy Access**: specific views for reading and managing personal collections.

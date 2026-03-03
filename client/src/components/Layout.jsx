@@ -45,10 +45,10 @@ const Layout = () => {
                         className="flex items-center gap-3 cursor-pointer"
                         onClick={() => setIsCollapsed(!isCollapsed)}
                     >
-                        <img src="/logo.png" alt="DRR Logo" className="w-8 h-8 object-contain" />
+                        <img src="/logo.svg" alt="Digital Reading Room Logo" className="w-8 h-8 object-contain" />
                         {(!isCollapsed || isMobileOpen) && (
                             <span className="text-xl font-bold text-brand-600 dark:text-brand-400">
-                                GUNI Lib
+                                Digital Reading Room
                             </span>
                         )}
                     </div>
@@ -150,9 +150,9 @@ const Layout = () => {
             {/* Mobile Header */}
             <header className="md:hidden fixed top-0 left-0 right-0 h-14 bg-white dark:bg-black border-b border-gray-200/50 dark:border-zinc-800/50 z-30 px-4 flex items-center justify-between transition-colors duration-150">
                 <div className="flex items-center gap-2">
-                    <img src="/logo.png" alt="DRR Logo" className="h-6 w-auto object-contain" />
+                    <img src="/logo.svg" alt="Digital Reading Room Logo" className="h-6 w-auto object-contain" />
                     <span className="text-lg font-bold tracking-tight text-brand-600 dark:text-brand-400">
-                        GUNI Lib
+                        Digital Reading Room
                     </span>
                 </div>
 

@@ -185,14 +185,14 @@ router.post('/forgot-password', async (req, res) => {
         });
 
         const mailOptions = {
-            from: `"Digital Room Reader" <${process.env.SMTP_USER || 'noreply@drr.com'}>`,
+            from: `"Digital Reading Room" <${process.env.SMTP_USER || 'noreply@drr.com'}>`,
             to: user.email,
-            subject: 'Password Reset Request - Digital Room Reader',
+            subject: 'Password Reset Request - Digital Reading Room',
             html: `
                 <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background: #f9fafb; border-radius: 12px; overflow: hidden;">
                     <div style="background: linear-gradient(135deg, #6366f1, #8b5cf6); padding: 32px; text-align: center;">
                         <h1 style="color: white; margin: 0; font-size: 24px;">🔒 Password Reset</h1>
-                        <p style="color: rgba(255,255,255,0.85); margin-top: 8px;">Digital Room Reader</p>
+                        <p style="color: rgba(255,255,255,0.85); margin-top: 8px;">Digital Reading Room</p>
                     </div>
                     <div style="padding: 32px;">
                         <p style="color: #374151; font-size: 16px;">Hi <strong>${user.name}</strong>,</p>

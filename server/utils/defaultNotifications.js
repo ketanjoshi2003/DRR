@@ -43,7 +43,7 @@ const checkInactiveStudents = async () => {
                         <p>We noticed you haven't read any materials on the Digital Reading Room in the past ${STUDENT_INACTIVITY_DAYS} days.</p>
                         <p>Your instructors are constantly uploading new PDFs, course materials, and study guides. Don't miss out on important resources!</p>
                         <p>Log in today to explore new subjects and improve your learning experience.</p>
-                        <p style="margin-top: 30px;">Best regards,<br>The DRR Team</p>
+                        <p style="margin-top: 30px;">Best regards,<br>The Digital Reading Room Team</p>
                     </div>
                 `;
 
@@ -85,7 +85,7 @@ const checkInactiveTeachers = async () => {
 
                 const subject = totalUploads > 0
                     ? `Reminder: Keep your students engaged, ${teacher.name.split(' ')[0]}`
-                    : `Welcome to DRR! Upload your first study material`;
+                    : `Welcome to Digital Reading Room! Upload your first study material`;
 
                 const html = `
                     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
@@ -94,7 +94,7 @@ const checkInactiveTeachers = async () => {
                         <p>We want to make sure your students have everything they need to succeed.</p>
                         <p>It's been a while since you shared any new materials (no uploads in the past ${TEACHER_INACTIVITY_DAYS} days). Did you know that regular uploads significantly boost student engagement?</p>
                         <p>Log in to your dashboard to upload new PDFs, assign courses, and track student reading analytics.</p>
-                        <p style="margin-top: 30px;">Best regards,<br>The DRR Team</p>
+                        <p style="margin-top: 30px;">Best regards,<br>The Digital Reading Room Team</p>
                     </div>
                 `;
 
