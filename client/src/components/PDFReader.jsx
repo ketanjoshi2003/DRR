@@ -15,8 +15,10 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL(
     import.meta.url,
 ).toString();
 
+const EMPTY_PAGE_NOTES = Object.freeze([]);
+
 // Memoized Page Component — uses DOM-based highlighting after render
-const PageContent = memo(({ pageNumber, scale, notes, selection }) => {
+const PageContent = memo(({ pageNumber, scale, pageNotes, selectionText }) => {
     const pageContainerRef = useRef(null);
 
     // Apply highlights directly on the text layer DOM after render
@@ -26,21 +28,11 @@ const PageContent = memo(({ pageNumber, scale, notes, selection }) => {
         const textLayer = pageContainerRef.current.querySelector('.react-pdf__Page__textContent');
         if (!textLayer) return;
 
-        // Remove existing highlights first
-        const existingMarks = textLayer.querySelectorAll('mark[data-pdf-highlight]');
-        existingMarks.forEach(mark => {
-            const parent = mark.parentNode;
-            const textNode = document.createTextNode(mark.textContent);
-            parent.replaceChild(textNode, mark);
-            parent.normalize();
-        });
-
         // Collect all relevant texts to highlight on this page
         const highlights = [];
 
         // Add saved notes for this page
-        notes.forEach(note => {
-            if (note.pageNumber !== pageNumber) return;
+        pageNotes.forEach(note => {
             if (!note.selectedText || note.selectedText.trim().length === 0) return;
             highlights.push({
                 text: note.selectedText,
@@ -51,16 +43,50 @@ const PageContent = memo(({ pageNumber, scale, notes, selection }) => {
         });
 
         // Add temporary selection
-        if (selection && selection.page === pageNumber && selection.text.trim().length > 0) {
+        if (selectionText && selectionText.trim().length > 0) {
             highlights.push({
-                text: selection.text,
+                text: selectionText,
                 type: 'selection',
                 title: 'New selection',
                 id: 'selection'
             });
         }
 
-        if (highlights.length === 0) return;
+        const highlightSignature = JSON.stringify({
+            pageNumber,
+            scale: Number(scale).toFixed(3),
+            highlights: highlights.map((hl) => ({
+                id: hl.id,
+                text: hl.text,
+                type: hl.type,
+                title: hl.title
+            }))
+        });
+
+        const existingMarkCount = textLayer.querySelectorAll('mark[data-pdf-highlight]').length;
+        if (textLayer.dataset.highlightSignature === highlightSignature) {
+            // If text layer got repainted and marks are gone, force re-apply.
+            if (highlights.length > 0 && existingMarkCount === 0) {
+                // continue and rebuild
+            } else {
+                return;
+            }
+        }
+
+        // Remove existing highlights first
+        const existingMarks = textLayer.querySelectorAll('mark[data-pdf-highlight]');
+        existingMarks.forEach(mark => {
+            const parent = mark.parentNode;
+            if (!parent) return;
+            const textNode = document.createTextNode(mark.textContent);
+            parent.replaceChild(textNode, mark);
+            parent.normalize();
+        });
+
+        if (highlights.length === 0) {
+            textLayer.dataset.highlightSignature = highlightSignature;
+            return;
+        }
 
         // Walk all text nodes in the text layer
         const treeWalker = document.createTreeWalker(
@@ -97,7 +123,8 @@ const PageContent = memo(({ pageNumber, scale, notes, selection }) => {
                 if (nm.start >= matchEnd) break;
 
                 const textNode = nm.node;
-                if (!textNode.parentNode) continue;
+                if (!textNode?.parentNode) continue;
+                if (textNode.parentNode.closest('mark[data-pdf-highlight]')) continue;
 
                 const nodeStart = nm.start;
                 const nodeEnd = nm.end;
@@ -112,9 +139,12 @@ const PageContent = memo(({ pageNumber, scale, notes, selection }) => {
                 const after = nodeText.substring(overlapEnd);
 
                 const frag = document.createDocumentFragment();
+                let beforeNode = null;
+                let afterNode = null;
 
                 if (before) {
-                    frag.appendChild(document.createTextNode(before));
+                    beforeNode = document.createTextNode(before);
+                    frag.appendChild(beforeNode);
                 }
 
                 const mark = document.createElement('mark');
@@ -132,33 +162,37 @@ const PageContent = memo(({ pageNumber, scale, notes, selection }) => {
                 frag.appendChild(mark);
 
                 if (after) {
-                    frag.appendChild(document.createTextNode(after));
+                    afterNode = document.createTextNode(after);
+                    frag.appendChild(afterNode);
                 }
 
                 textNode.parentNode.replaceChild(frag, textNode);
 
                 // Update nodeMap for subsequent highlights
                 const newEntries = [];
-                if (before) {
+                if (beforeNode) {
                     newEntries.push({
-                        node: frag.firstChild,
+                        node: beforeNode,
                         start: nodeStart,
                         end: nodeStart + before.length
                     });
                 }
-                newEntries.push({
-                    node: mark.firstChild,
-                    start: nodeStart + overlapStart,
-                    end: nodeStart + overlapEnd
-                });
-                if (after) {
+                if (mark.firstChild) {
                     newEntries.push({
-                        node: frag.lastChild,
+                        node: mark.firstChild,
+                        start: nodeStart + overlapStart,
+                        end: nodeStart + overlapEnd
+                    });
+                }
+                if (afterNode) {
+                    newEntries.push({
+                        node: afterNode,
                         start: nodeStart + overlapEnd,
                         end: nodeEnd
                     });
                 }
                 nodeMap.splice(i, 1, ...newEntries);
+                i += newEntries.length - 1;
             }
         }
 
@@ -204,22 +238,22 @@ const PageContent = memo(({ pageNumber, scale, notes, selection }) => {
 
             applyHighlightRange(matchStart, matchEnd, hl);
         });
-    }, [notes, pageNumber, selection]);
+
+        textLayer.dataset.highlightSignature = highlightSignature;
+    }, [pageNotes, pageNumber, scale, selectionText]);
 
     // Re-apply highlights when notes/selection change
     useEffect(() => {
-        // Small delay to ensure text layer is fully rendered
-        const timer = setTimeout(() => {
+        const frame = requestAnimationFrame(() => {
             applyHighlights();
-        }, 300);
-        return () => clearTimeout(timer);
+        });
+        return () => cancelAnimationFrame(frame);
     }, [applyHighlights]);
 
     const handleRenderSuccess = useCallback(() => {
-        // Apply highlights after text layer renders
-        setTimeout(() => {
+        requestAnimationFrame(() => {
             applyHighlights();
-        }, 200);
+        });
     }, [applyHighlights]);
 
     return (
@@ -236,6 +270,23 @@ const PageContent = memo(({ pageNumber, scale, notes, selection }) => {
             />
         </div>
     );
+}, (prevProps, nextProps) => {
+    if (prevProps.pageNumber !== nextProps.pageNumber) return false;
+    if (prevProps.scale !== nextProps.scale) return false;
+    if (prevProps.selectionText !== nextProps.selectionText) return false;
+    if (prevProps.pageNotes.length !== nextProps.pageNotes.length) return false;
+
+    for (let i = 0; i < prevProps.pageNotes.length; i++) {
+        const prevNote = prevProps.pageNotes[i];
+        const nextNote = nextProps.pageNotes[i];
+        if (!nextNote) return false;
+        if (prevNote._id !== nextNote._id) return false;
+        if (prevNote.selectedText !== nextNote.selectedText) return false;
+        if (prevNote.noteContent !== nextNote.noteContent) return false;
+        if (prevNote.color !== nextNote.color) return false;
+    }
+
+    return true;
 });
 
 const PDFReader = () => {
@@ -276,6 +327,16 @@ const PDFReader = () => {
 
     const [blobUrl, setBlobUrl] = useState(null);
     const currentPageRef = useRef(1); // ref for heartbeat to see latest page without closure stale issues
+    const notesByPage = useMemo(() => {
+        const grouped = new Map();
+        notes.forEach((note) => {
+            const page = Number(note.pageNumber);
+            if (!Number.isFinite(page)) return;
+            if (!grouped.has(page)) grouped.set(page, []);
+            grouped.get(page).push(note);
+        });
+        return grouped;
+    }, [notes]);
 
     // Update ref whenever pageNumber changes
     useEffect(() => {
@@ -514,7 +575,7 @@ const PDFReader = () => {
                 noteContent: noteText,
                 pageNumber: selection.page
             });
-            setNotes([data, ...notes]);
+            setNotes((prevNotes) => [data, ...prevNotes]);
             setSelection(null);
             setNoteText('');
             window.getSelection().removeAllRanges();
@@ -529,7 +590,7 @@ const PDFReader = () => {
         if (!window.confirm('Delete this note?')) return;
         try {
             await api.delete(`/notes/${noteId}`);
-            setNotes(notes.filter(n => n._id !== noteId));
+            setNotes((prevNotes) => prevNotes.filter((n) => n._id !== noteId));
         } catch (err) {
             console.error('Failed to delete note', err);
         }
@@ -753,8 +814,8 @@ const PDFReader = () => {
                                 <PageContent
                                     pageNumber={index + 1}
                                     scale={scale}
-                                    notes={notes}
-                                    selection={selection}
+                                    pageNotes={notesByPage.get(index + 1) || EMPTY_PAGE_NOTES}
+                                    selectionText={selection?.page === index + 1 ? selection.text : ''}
                                 />
                                 <div className="absolute bottom-4 right-4 bg-black/50 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
                                     Page {index + 1}

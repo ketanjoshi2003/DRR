@@ -31,6 +31,7 @@ const DocViewer = () => {
     const [selection, setSelection] = useState(null); // { text }
     const [noteText, setNoteText] = useState('');
     const [docRendered, setDocRendered] = useState(false);
+    const previousNotesRef = useRef([]);
 
     // Reading Session Analytics
     useEffect(() => {
@@ -70,6 +71,8 @@ const DocViewer = () => {
             try {
                 setLoading(true);
                 setDocRendered(false);
+                previousNotesRef.current = [];
+                setNotes([]);
                 // 1. Fetch Metadata
                 const { data: metaData } = await api.get(`/pdfs/${id}`);
                 setMeta(metaData);
@@ -126,59 +129,89 @@ const DocViewer = () => {
         if (id) fetchNotes();
     }, [id]);
 
-    // Apply highlights to rendered DOCX content when notes change or doc renders
-    const applyHighlights = useCallback(() => {
+    const clearHighlights = useCallback(() => {
+        if (!containerRef.current) return;
+
+        const existingMarks = containerRef.current.querySelectorAll('mark[data-note-highlight]');
+        existingMarks.forEach((mark) => {
+            const parent = mark.parentNode;
+            if (!parent) return;
+            const textNode = document.createTextNode(mark.textContent);
+            parent.replaceChild(textNode, mark);
+            parent.normalize();
+        });
+    }, []);
+
+    const removeHighlightsByNoteIds = useCallback((noteIds) => {
+        if (!containerRef.current || noteIds.length === 0) return;
+
+        const noteIdSet = new Set(noteIds);
+        const marks = containerRef.current.querySelectorAll('mark[data-note-highlight][data-note-id]');
+        marks.forEach((mark) => {
+            const noteId = mark.getAttribute('data-note-id');
+            if (!noteIdSet.has(noteId)) return;
+
+            const parent = mark.parentNode;
+            if (!parent) return;
+            const textNode = document.createTextNode(mark.textContent);
+            parent.replaceChild(textNode, mark);
+            parent.normalize();
+        });
+    }, []);
+
+    // Apply highlights to rendered DOCX content.
+    const applyHighlights = useCallback((notesToApply, { resetExisting = false } = {}) => {
         if (!containerRef.current || !docRendered) return;
 
-        // First, remove all old highlights
-        const existingMarks = containerRef.current.querySelectorAll('mark[data-note-highlight]');
-        existingMarks.forEach(mark => {
-            const parent = mark.parentNode;
-            if (parent) {
-                const textNode = document.createTextNode(mark.textContent);
-                parent.replaceChild(textNode, mark);
-                parent.normalize();
-            }
-        });
+        if (resetExisting) {
+            clearHighlights();
+        }
 
-        if (notes.length === 0) return;
+        if (!notesToApply || notesToApply.length === 0) return;
 
-        // Walk through all text nodes in the container
+        // Walk through text nodes that are not already inside highlight marks.
         const textNodes = [];
         const treeWalker = document.createTreeWalker(
             containerRef.current,
             NodeFilter.SHOW_TEXT,
-            null,
-            false
+            {
+                acceptNode: (candidate) => {
+                    if (!candidate.textContent || candidate.textContent.length === 0) {
+                        return NodeFilter.FILTER_REJECT;
+                    }
+
+                    const parentElement = candidate.parentElement;
+                    if (parentElement?.closest('mark[data-note-highlight]')) {
+                        return NodeFilter.FILTER_REJECT;
+                    }
+
+                    return NodeFilter.FILTER_ACCEPT;
+                }
+            }
         );
 
         let node;
         while ((node = treeWalker.nextNode())) {
-            if (node.textContent.length > 0) {
-                textNodes.push(node);
-            }
+            textNodes.push(node);
         }
 
-        // Build a full text string with node mapping
+        // Build a full text string with node mapping.
         let fullText = '';
         const nodeMap = []; // { node, start, end }
-        textNodes.forEach(tn => {
+        textNodes.forEach((textNode) => {
             const start = fullText.length;
-            fullText += tn.textContent;
-            nodeMap.push({ node: tn, start, end: fullText.length });
+            fullText += textNode.textContent;
+            nodeMap.push({ node: textNode, start, end: fullText.length });
         });
 
-        const fullTextLower = fullText.toLowerCase();
-        // For each note, find occurrences and wrap them
-        notes.forEach(note => {
+        // For each note, find one occurrence and wrap it.
+        notesToApply.forEach((note) => {
             const searchText = note.selectedText;
             if (!searchText || searchText.trim().length === 0) return;
 
             // FUZZY MATCHING:
-            // Normalize spaces, escape for regex, and allow flexible whitespace between everything
-            // This handles cases where selection includes newlines or spaces not present in original raw text
+            // Normalize spaces, escape for regex, and allow flexible whitespace.
             const escapedSearch = searchText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-            // Replace any existing whitespace in search with \s* (multi-line flexible space)
             const fuzzyRegexSource = escapedSearch.replace(/\s+/g, '\\s*');
 
             let match;
@@ -190,82 +223,105 @@ const DocViewer = () => {
                 return;
             }
 
-            if (match) {
-                const matchStart = match.index;
-                const matchEnd = match.index + match[0].length;
+            if (!match) return;
 
-                // Find which text nodes this match spans and highlight them ALL
-                for (let i = 0; i < nodeMap.length; i++) {
-                    const nm = nodeMap[i];
-                    if (nm.end <= matchStart) continue; // Match starts after this node
-                    if (nm.start >= matchEnd) break;    // Match has ended before this node
+            const matchStart = match.index;
+            const matchEnd = match.index + match[0].length;
 
-                    const textNode = nm.node;
-                    if (!textNode.parentNode) continue; // Node already replaced by previous note wrap
+            // Find which text nodes this match spans and highlight them all.
+            for (let i = 0; i < nodeMap.length; i++) {
+                const nodeMeta = nodeMap[i];
+                if (nodeMeta.end <= matchStart) continue;
+                if (nodeMeta.start >= matchEnd) break;
 
-                    const nodeStart = nm.start;
-                    const nodeEnd = nm.end;
+                const textNode = nodeMeta.node;
+                if (!textNode?.parentNode) continue;
 
-                    // The portion of this text node that overlaps with the match
-                    const overlapStart = Math.max(matchStart, nodeStart) - nodeStart;
-                    const overlapEnd = Math.min(matchEnd, nodeEnd) - nodeStart;
+                const nodeStart = nodeMeta.start;
+                const nodeEnd = nodeMeta.end;
 
-                    if (overlapStart >= overlapEnd) continue;
+                const overlapStart = Math.max(matchStart, nodeStart) - nodeStart;
+                const overlapEnd = Math.min(matchEnd, nodeEnd) - nodeStart;
+                if (overlapStart >= overlapEnd) continue;
 
-                    const nodeText = textNode.textContent;
-                    const before = nodeText.substring(0, overlapStart);
-                    const matched = nodeText.substring(overlapStart, overlapEnd);
-                    const after = nodeText.substring(overlapEnd);
+                const nodeText = textNode.textContent;
+                const before = nodeText.substring(0, overlapStart);
+                const matched = nodeText.substring(overlapStart, overlapEnd);
+                const after = nodeText.substring(overlapEnd);
 
-                    const frag = document.createDocumentFragment();
+                const frag = document.createDocumentFragment();
 
-                    if (before) {
-                        frag.appendChild(document.createTextNode(before));
-                    }
-
-                    const mark = document.createElement('mark');
-                    mark.setAttribute('data-note-highlight', 'true');
-                    mark.setAttribute('data-note-id', note._id);
-                    mark.style.backgroundColor = note.color || 'rgba(250, 204, 21, 0.45)';
-                    mark.style.color = 'inherit';
-                    mark.style.borderRadius = '2px';
-                    mark.style.padding = '1px 0';
-                    mark.style.cursor = 'pointer';
-                    mark.style.mixBlendMode = 'multiply';
-                    mark.title = note.noteContent || 'Note';
-                    mark.textContent = matched;
-                    frag.appendChild(mark);
-
-                    if (after) {
-                        frag.appendChild(document.createTextNode(after));
-                    }
-
-                    const parent = textNode.parentNode;
-                    parent.replaceChild(frag, textNode);
-
-                    // Update the nodeMap to reflect nodes we just created
-                    const newEntries = [];
-                    let currentNode = mark.previousSibling;
-                    if (before && currentNode) {
-                        newEntries.push({ node: currentNode, start: nodeStart, end: nodeStart + before.length });
-                    }
-                    newEntries.push({ node: mark.firstChild, start: nodeStart + overlapStart, end: nodeStart + overlapEnd });
-
-                    currentNode = mark.nextSibling;
-                    if (after && currentNode) {
-                        newEntries.push({ node: currentNode, start: nodeStart + overlapEnd, end: nodeEnd });
-                    }
-
-                    nodeMap.splice(i, 1, ...newEntries);
-                    i += newEntries.length - 1;
+                if (before) {
+                    frag.appendChild(document.createTextNode(before));
                 }
+
+                const mark = document.createElement('mark');
+                mark.setAttribute('data-note-highlight', 'true');
+                mark.setAttribute('data-note-id', note._id);
+                mark.style.backgroundColor = note.color || 'rgba(250, 204, 21, 0.45)';
+                mark.style.color = 'inherit';
+                mark.style.borderRadius = '2px';
+                mark.style.padding = '1px 0';
+                mark.style.cursor = 'pointer';
+                mark.style.mixBlendMode = 'multiply';
+                mark.title = note.noteContent || 'Note';
+                mark.textContent = matched;
+                frag.appendChild(mark);
+
+                if (after) {
+                    frag.appendChild(document.createTextNode(after));
+                }
+
+                const parent = textNode.parentNode;
+                parent.replaceChild(frag, textNode);
+
+                // Update the nodeMap to reflect nodes we just created.
+                const newEntries = [];
+                let currentNode = mark.previousSibling;
+                if (before && currentNode) {
+                    newEntries.push({ node: currentNode, start: nodeStart, end: nodeStart + before.length });
+                }
+                newEntries.push({ node: mark.firstChild, start: nodeStart + overlapStart, end: nodeStart + overlapEnd });
+
+                currentNode = mark.nextSibling;
+                if (after && currentNode) {
+                    newEntries.push({ node: currentNode, start: nodeStart + overlapEnd, end: nodeEnd });
+                }
+
+                nodeMap.splice(i, 1, ...newEntries);
+                i += newEntries.length - 1;
             }
         });
-    }, [notes, docRendered]);
+    }, [clearHighlights, docRendered]);
 
     useEffect(() => {
-        applyHighlights();
-    }, [applyHighlights]);
+        if (!docRendered) return;
+
+        const previousNotes = previousNotesRef.current;
+        const previousNoteIdSet = new Set(previousNotes.map((note) => note._id));
+        const currentNoteIdSet = new Set(notes.map((note) => note._id));
+
+        const removedNoteIds = previousNotes
+            .filter((note) => !currentNoteIdSet.has(note._id))
+            .map((note) => note._id);
+        const addedNotes = notes.filter((note) => !previousNoteIdSet.has(note._id));
+
+        const frame = requestAnimationFrame(() => {
+            if (previousNotes.length === 0) {
+                applyHighlights(notes, { resetExisting: true });
+            } else if (addedNotes.length > 0 && removedNoteIds.length === 0) {
+                applyHighlights(addedNotes, { resetExisting: false });
+            } else if (addedNotes.length === 0 && removedNoteIds.length > 0) {
+                removeHighlightsByNoteIds(removedNoteIds);
+            } else {
+                applyHighlights(notes, { resetExisting: true });
+            }
+
+            previousNotesRef.current = notes;
+        });
+
+        return () => cancelAnimationFrame(frame);
+    }, [applyHighlights, docRendered, notes, removeHighlightsByNoteIds]);
 
     // Handle Text Selection
     const handleMouseUp = () => {
@@ -291,7 +347,7 @@ const DocViewer = () => {
                 noteContent: noteText,
                 pageNumber: 1 // Docs don't have page numbers in the same way as PDFs
             });
-            setNotes([data, ...notes]);
+            setNotes((prevNotes) => [data, ...prevNotes]);
             setSelection(null);
             setNoteText('');
             window.getSelection().removeAllRanges();
@@ -306,7 +362,7 @@ const DocViewer = () => {
         if (!window.confirm('Delete this note?')) return;
         try {
             await api.delete(`/notes/${noteId}`);
-            setNotes(notes.filter(n => n._id !== noteId));
+            setNotes((prevNotes) => prevNotes.filter((n) => n._id !== noteId));
         } catch (err) {
             console.error('Failed to delete note', err);
         }
