@@ -10,6 +10,16 @@ import {
 import MetadataModal from './MetadataModal';
 import { usePreventDownload } from '../hooks/usePreventDownload';
 
+const HIGHLIGHT_COLORS = [
+    { name: 'Yellow', value: 'rgba(250, 204, 21, 0.45)' },
+    { name: 'Green', value: 'rgba(74, 222, 128, 0.4)' },
+    { name: 'Blue', value: 'rgba(96, 165, 250, 0.4)' },
+    { name: 'Pink', value: 'rgba(244, 114, 182, 0.4)' },
+    { name: 'Orange', value: 'rgba(251, 146, 60, 0.4)' }
+];
+
+const DEFAULT_HIGHLIGHT_COLOR = HIGHLIGHT_COLORS[0].value;
+
 const DocViewer = () => {
     usePreventDownload();
     const { id } = useParams();
@@ -30,6 +40,7 @@ const DocViewer = () => {
     const [showNotes, setShowNotes] = useState(false);
     const [selection, setSelection] = useState(null); // { text }
     const [noteText, setNoteText] = useState('');
+    const [selectedHighlightColor, setSelectedHighlightColor] = useState(DEFAULT_HIGHLIGHT_COLOR);
     const [docRendered, setDocRendered] = useState(false);
     const previousNotesRef = useRef([]);
 
@@ -258,12 +269,14 @@ const DocViewer = () => {
                 const mark = document.createElement('mark');
                 mark.setAttribute('data-note-highlight', 'true');
                 mark.setAttribute('data-note-id', note._id);
-                mark.style.backgroundColor = note.color || 'rgba(250, 204, 21, 0.45)';
-                mark.style.color = 'inherit';
+                mark.style.backgroundColor = note.color || DEFAULT_HIGHLIGHT_COLOR;
+                mark.style.color = '#111827';
                 mark.style.borderRadius = '2px';
                 mark.style.padding = '1px 0';
                 mark.style.cursor = 'pointer';
-                mark.style.mixBlendMode = 'multiply';
+                mark.style.mixBlendMode = 'normal';
+                mark.style.filter = 'none';
+                mark.style.webkitTextFillColor = '#111827';
                 mark.title = note.noteContent || 'Note';
                 mark.textContent = matched;
                 frag.appendChild(mark);
@@ -321,7 +334,7 @@ const DocViewer = () => {
         });
 
         return () => cancelAnimationFrame(frame);
-    }, [applyHighlights, docRendered, notes, removeHighlightsByNoteIds]);
+    }, [applyHighlights, docRendered, isDarkMode, notes, removeHighlightsByNoteIds]);
 
     // Handle Text Selection
     const handleMouseUp = () => {
@@ -345,7 +358,8 @@ const DocViewer = () => {
                 pdfId: id,
                 selectedText: selection.text,
                 noteContent: noteText,
-                pageNumber: 1 // Docs don't have page numbers in the same way as PDFs
+                pageNumber: 1, // Docs don't have page numbers in the same way as PDFs
+                color: selectedHighlightColor
             });
             setNotes((prevNotes) => [data, ...prevNotes]);
             setSelection(null);
@@ -549,6 +563,32 @@ const DocViewer = () => {
                                 "{selection.text}"
                             </p>
                         </div>
+                        <div className="mb-3">
+                            <div className="flex items-center justify-between mb-2">
+                                <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                                    Highlight Color
+                                </span>
+                                <span className="text-[11px] text-gray-400 dark:text-gray-500">
+                                    {HIGHLIGHT_COLORS.find((color) => color.value === selectedHighlightColor)?.name}
+                                </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                {HIGHLIGHT_COLORS.map((color) => {
+                                    const isSelected = selectedHighlightColor === color.value;
+                                    return (
+                                        <button
+                                            key={color.name}
+                                            type="button"
+                                            onClick={() => setSelectedHighlightColor(color.value)}
+                                            className={`w-6 h-6 rounded-full border transition-transform ${isSelected ? 'border-gray-900 dark:border-gray-100 scale-110' : 'border-gray-200 dark:border-zinc-700 hover:scale-105'}`}
+                                            style={{ backgroundColor: color.value }}
+                                            title={color.name}
+                                            aria-label={`Use ${color.name} highlight`}
+                                        />
+                                    );
+                                })}
+                            </div>
+                        </div>
                         <textarea
                             value={noteText}
                             onChange={(e) => setNoteText(e.target.value)}
@@ -591,14 +631,27 @@ const DocViewer = () => {
                                 <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 max-w-[200px]">Select any text in the document to create your first note.</p>
                             </div>
                         ) : (
-                            notes.map(note => (
-                                <div key={note._id} className="group bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-lg p-3 hover:border-brand-200 dark:hover:border-brand-800 transition-colors relative">
+                            notes.map(note => {
+                                const highlightColor = note.color || DEFAULT_HIGHLIGHT_COLOR;
+                                return (
+                                <div
+                                    key={note._id}
+                                    className="group bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-lg p-3 hover:border-brand-200 dark:hover:border-brand-800 transition-colors relative"
+                                    style={{ borderLeft: `4px solid ${highlightColor}` }}
+                                >
                                     <div className="flex justify-between items-start mb-2">
-                                        <span
-                                            className="text-[10px] font-bold tracking-wide text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-900/40 px-2 py-0.5 rounded"
-                                        >
-                                            DOC
-                                        </span>
+                                        <div className="flex items-center gap-2">
+                                            <span
+                                                className="text-[10px] font-bold tracking-wide text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-900/40 px-2 py-0.5 rounded"
+                                            >
+                                                DOC
+                                            </span>
+                                            <span
+                                                className="w-2.5 h-2.5 rounded-full border border-black/10 dark:border-white/20"
+                                                style={{ backgroundColor: highlightColor }}
+                                                title="Highlight color"
+                                            />
+                                        </div>
                                         <button
                                             onClick={() => deleteNote(note._id)}
                                             className="opacity-0 group-hover:opacity-100 p-1 text-gray-300 hover:text-red-500 transition-colors"
@@ -608,7 +661,7 @@ const DocViewer = () => {
                                         </button>
                                     </div>
 
-                                    <div className="mb-2 pl-3 border-l-2 border-brand-100 dark:border-brand-900">
+                                    <div className="mb-2 pl-3 border-l-2" style={{ borderLeftColor: highlightColor }}>
                                         <p className="text-xs text-gray-500 dark:text-gray-400 italic line-clamp-2">
                                             "{note.selectedText}"
                                         </p>
@@ -624,7 +677,8 @@ const DocViewer = () => {
                                         <span>{new Date(note.createdAt).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}</span>
                                     </div>
                                 </div>
-                            ))
+                                );
+                            })
                         )}
                     </div>
                 </div>
@@ -646,16 +700,21 @@ const DocViewer = () => {
                 .dark-mode-doc .docx-preview-wrapper {
                     filter: invert(1) hue-rotate(180deg);
                 }
-                .dark-mode-doc img, .dark-mode-doc mark[data-note-highlight] {
-                    filter: invert(1) hue-rotate(180deg); /* Revert images and highlights */
+                .dark-mode-doc img {
+                    filter: invert(1) hue-rotate(180deg); /* Revert images only */
+                }
+                .dark-mode-doc mark[data-note-highlight] {
+                    filter: none !important;
+                    mix-blend-mode: normal !important;
+                    color: #111827 !important;
+                    -webkit-text-fill-color: #111827 !important;
                 }
                 /* Note highlight styles */
                 mark[data-note-highlight] {
                     transition: background-color 0.2s ease;
                 }
                 mark[data-note-highlight]:hover {
-                    background-color: rgba(250, 204, 21, 0.7) !important;
-                    outline: 2px solid rgba(250, 204, 21, 0.3);
+                    outline: 2px solid rgba(107, 114, 128, 0.35);
                     outline-offset: 1px;
                 }
             `}</style>

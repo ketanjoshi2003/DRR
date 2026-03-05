@@ -16,9 +16,68 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL(
 ).toString();
 
 const EMPTY_PAGE_NOTES = Object.freeze([]);
+const HIGHLIGHT_COLORS = [
+    { name: 'Yellow', value: 'rgba(250, 204, 21, 0.45)' },
+    { name: 'Green', value: 'rgba(74, 222, 128, 0.4)' },
+    { name: 'Blue', value: 'rgba(96, 165, 250, 0.4)' },
+    { name: 'Pink', value: 'rgba(244, 114, 182, 0.4)' },
+    { name: 'Orange', value: 'rgba(251, 146, 60, 0.4)' }
+];
+const DEFAULT_HIGHLIGHT_COLOR = HIGHLIGHT_COLORS[0].value;
+const DEFAULT_HIGHLIGHT_ALPHA = 0.45;
+const MIN_HIGHLIGHT_ALPHA = 0.4;
+const MAX_HIGHLIGHT_ALPHA = 0.55;
+
+const getOverlayColor = (rawColor) => {
+    const color = String(rawColor || DEFAULT_HIGHLIGHT_COLOR).trim();
+
+    const rgbaMatch = color.match(/^rgba\(([^)]+)\)$/i);
+    if (rgbaMatch) {
+        const parts = rgbaMatch[1].split(',').map((part) => part.trim());
+        if (parts.length === 4) {
+            const [r, g, b, a] = parts;
+            const parsedAlpha = Number.parseFloat(a);
+            let alpha = DEFAULT_HIGHLIGHT_ALPHA;
+
+            if (Number.isFinite(parsedAlpha)) {
+                // Preserve user-selected opacity, but avoid too faint or solid bars.
+                if (parsedAlpha > MAX_HIGHLIGHT_ALPHA) {
+                    alpha = DEFAULT_HIGHLIGHT_ALPHA;
+                } else {
+                    alpha = Math.max(parsedAlpha, MIN_HIGHLIGHT_ALPHA);
+                }
+            }
+
+            return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        }
+    }
+
+    const rgbMatch = color.match(/^rgb\(([^)]+)\)$/i);
+    if (rgbMatch) {
+        const parts = rgbMatch[1].split(',').map((part) => part.trim());
+        if (parts.length === 3) {
+            const [r, g, b] = parts;
+            return `rgba(${r}, ${g}, ${b}, ${DEFAULT_HIGHLIGHT_ALPHA})`;
+        }
+    }
+
+    const hexMatch = color.match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i);
+    if (hexMatch) {
+        let hex = hexMatch[1];
+        if (hex.length === 3) {
+            hex = hex.split('').map((ch) => ch + ch).join('');
+        }
+        const r = Number.parseInt(hex.slice(0, 2), 16);
+        const g = Number.parseInt(hex.slice(2, 4), 16);
+        const b = Number.parseInt(hex.slice(4, 6), 16);
+        return `rgba(${r}, ${g}, ${b}, ${DEFAULT_HIGHLIGHT_ALPHA})`;
+    }
+
+    return `rgba(250, 204, 21, ${DEFAULT_HIGHLIGHT_ALPHA})`;
+};
 
 // Memoized Page Component — uses DOM-based highlighting after render
-const PageContent = memo(({ pageNumber, scale, pageNotes, selectionText }) => {
+const PageContent = memo(({ pageNumber, scale, pageNotes, selectionText, selectionColor }) => {
     const pageContainerRef = useRef(null);
 
     // Apply highlights directly on the text layer DOM after render
@@ -38,7 +97,8 @@ const PageContent = memo(({ pageNumber, scale, pageNotes, selectionText }) => {
                 text: note.selectedText,
                 type: 'note',
                 title: note.noteContent || 'Note',
-                id: note._id
+                id: note._id,
+                color: getOverlayColor(note.color || DEFAULT_HIGHLIGHT_COLOR)
             });
         });
 
@@ -48,7 +108,8 @@ const PageContent = memo(({ pageNumber, scale, pageNotes, selectionText }) => {
                 text: selectionText,
                 type: 'selection',
                 title: 'New selection',
-                id: 'selection'
+                id: 'selection',
+                color: getOverlayColor(selectionColor || DEFAULT_HIGHLIGHT_COLOR)
             });
         }
 
@@ -59,7 +120,8 @@ const PageContent = memo(({ pageNumber, scale, pageNotes, selectionText }) => {
                 id: hl.id,
                 text: hl.text,
                 type: hl.type,
-                title: hl.title
+                title: hl.title,
+                color: hl.color
             }))
         });
 
@@ -150,12 +212,12 @@ const PageContent = memo(({ pageNumber, scale, pageNotes, selectionText }) => {
                 const mark = document.createElement('mark');
                 mark.setAttribute('data-pdf-highlight', 'true');
                 mark.setAttribute('data-highlight-id', hl.id);
-                mark.style.backgroundColor = hl.type === 'selection'
-                    ? 'rgba(168, 85, 247, 0.35)'
-                    : 'rgba(250, 204, 21, 0.4)';
-                mark.style.color = 'inherit';
+                mark.style.backgroundColor = hl.color || DEFAULT_HIGHLIGHT_COLOR;
+                // Keep text transparent so only the PDF canvas text is visible.
+                mark.style.color = 'transparent';
+                mark.style.webkitTextFillColor = 'transparent';
                 mark.style.borderRadius = '2px';
-                mark.style.padding = '0';
+                mark.style.padding = '0 1px';
                 mark.style.cursor = 'pointer';
                 mark.title = hl.title;
                 mark.textContent = matched;
@@ -240,7 +302,7 @@ const PageContent = memo(({ pageNumber, scale, pageNotes, selectionText }) => {
         });
 
         textLayer.dataset.highlightSignature = highlightSignature;
-    }, [pageNotes, pageNumber, scale, selectionText]);
+    }, [pageNotes, pageNumber, scale, selectionColor, selectionText]);
 
     // Re-apply highlights when notes/selection change
     useEffect(() => {
@@ -274,6 +336,7 @@ const PageContent = memo(({ pageNumber, scale, pageNotes, selectionText }) => {
     if (prevProps.pageNumber !== nextProps.pageNumber) return false;
     if (prevProps.scale !== nextProps.scale) return false;
     if (prevProps.selectionText !== nextProps.selectionText) return false;
+    if (prevProps.selectionColor !== nextProps.selectionColor) return false;
     if (prevProps.pageNotes.length !== nextProps.pageNotes.length) return false;
 
     for (let i = 0; i < prevProps.pageNotes.length; i++) {
@@ -306,6 +369,7 @@ const PDFReader = () => {
     const [showNotes, setShowNotes] = useState(false);
     const [selection, setSelection] = useState(null); // { text, page }
     const [noteText, setNoteText] = useState('');
+    const [selectedHighlightColor, setSelectedHighlightColor] = useState(DEFAULT_HIGHLIGHT_COLOR);
 
     // Reader State
     const [showThumbnails, setShowThumbnails] = useState(false);
@@ -573,7 +637,8 @@ const PDFReader = () => {
                 pdfId: id,
                 selectedText: selection.text,
                 noteContent: noteText,
-                pageNumber: selection.page
+                pageNumber: selection.page,
+                color: selectedHighlightColor
             });
             setNotes((prevNotes) => [data, ...prevNotes]);
             setSelection(null);
@@ -816,6 +881,7 @@ const PDFReader = () => {
                                     scale={scale}
                                     pageNotes={notesByPage.get(index + 1) || EMPTY_PAGE_NOTES}
                                     selectionText={selection?.page === index + 1 ? selection.text : ''}
+                                    selectionColor={selectedHighlightColor}
                                 />
                                 <div className="absolute bottom-4 right-4 bg-black/50 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
                                     Page {index + 1}
@@ -843,6 +909,32 @@ const PDFReader = () => {
                             <p className="text-xs text-gray-600 dark:text-gray-300 italic line-clamp-3">
                                 "{selection.text}"
                             </p>
+                        </div>
+                        <div className="mb-3">
+                            <div className="flex items-center justify-between mb-2">
+                                <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                                    Highlight Color
+                                </span>
+                                <span className="text-[11px] text-gray-400 dark:text-gray-500">
+                                    {HIGHLIGHT_COLORS.find((color) => color.value === selectedHighlightColor)?.name}
+                                </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                {HIGHLIGHT_COLORS.map((color) => {
+                                    const isSelected = selectedHighlightColor === color.value;
+                                    return (
+                                        <button
+                                            key={color.name}
+                                            type="button"
+                                            onClick={() => setSelectedHighlightColor(color.value)}
+                                            className={`w-6 h-6 rounded-full border transition-transform ${isSelected ? 'border-gray-900 dark:border-gray-100 scale-110' : 'border-gray-200 dark:border-zinc-700 hover:scale-105'}`}
+                                            style={{ backgroundColor: color.value }}
+                                            title={color.name}
+                                            aria-label={`Use ${color.name} highlight`}
+                                        />
+                                    );
+                                })}
+                            </div>
                         </div>
                         <textarea
                             value={noteText}
@@ -885,15 +977,28 @@ const PDFReader = () => {
                                 <p className="text-xs text-gray-400 mt-1 max-w-[200px]">Select any text in the document to create your first note.</p>
                             </div>
                         ) : (
-                            notes.map(note => (
-                                <div key={note._id} className="group bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-lg p-3 hover:border-brand-200 dark:hover:border-brand-800 transition-colors relative">
+                            notes.map(note => {
+                                const highlightColor = note.color || DEFAULT_HIGHLIGHT_COLOR;
+                                return (
+                                <div
+                                    key={note._id}
+                                    className="group bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-lg p-3 hover:border-brand-200 dark:hover:border-brand-800 transition-colors relative"
+                                    style={{ borderLeft: `4px solid ${highlightColor}` }}
+                                >
                                     <div className="flex justify-between items-start mb-2">
-                                        <span
-                                            className="text-[10px] font-bold tracking-wide text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-900/40 px-2 py-0.5 rounded cursor-pointer hover:bg-brand-100 dark:hover:bg-brand-900/60 transition-colors"
-                                            onClick={() => changePage(note.pageNumber - pageNumber)}
-                                        >
-                                            PAGE {note.pageNumber}
-                                        </span>
+                                        <div className="flex items-center gap-2">
+                                            <span
+                                                className="text-[10px] font-bold tracking-wide text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-900/40 px-2 py-0.5 rounded cursor-pointer hover:bg-brand-100 dark:hover:bg-brand-900/60 transition-colors"
+                                                onClick={() => changePage(note.pageNumber - pageNumber)}
+                                            >
+                                                PAGE {note.pageNumber}
+                                            </span>
+                                            <span
+                                                className="w-2.5 h-2.5 rounded-full border border-black/10 dark:border-white/20"
+                                                style={{ backgroundColor: highlightColor }}
+                                                title="Highlight color"
+                                            />
+                                        </div>
                                         <button
                                             onClick={() => deleteNote(note._id)}
                                             className="opacity-0 group-hover:opacity-100 p-1 text-gray-300 hover:text-red-500 transition-colors"
@@ -903,7 +1008,7 @@ const PDFReader = () => {
                                         </button>
                                     </div>
 
-                                    <div className="mb-2 pl-3 border-l-2 border-brand-100 dark:border-brand-900">
+                                    <div className="mb-2 pl-3 border-l-2" style={{ borderLeftColor: highlightColor }}>
                                         <p className="text-xs text-gray-500 dark:text-gray-400 italic line-clamp-2">
                                             "{note.selectedText}"
                                         </p>
@@ -919,7 +1024,8 @@ const PDFReader = () => {
                                         <span>{new Date(note.createdAt).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}</span>
                                     </div>
                                 </div>
-                            ))
+                                );
+                            })
                         )}
                     </div>
                 </div>
