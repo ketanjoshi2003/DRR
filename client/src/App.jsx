@@ -15,6 +15,7 @@ import ImageViewer from './components/ImageViewer';
 import DocViewer from './components/DocViewer';
 import MyCollection from './components/MyCollection';
 import EmailSender from './components/EmailSender';
+import ErrorBoundary from './components/ErrorBoundary';
 
 const PrivateRoute = ({ children, adminOnly = false, staffOnly = false }) => {
   const { user, loading } = useAuth();
@@ -100,8 +101,6 @@ function AppRoutes() {
     </Routes>
   );
 }
-
-import ErrorBoundary from './components/ErrorBoundary';
 
 function App() {
   return (
