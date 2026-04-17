@@ -23,6 +23,14 @@ const NoteSchema = new mongoose.Schema({
         type: Number,
         required: true
     },
+    anchorStart: {
+        type: Number,
+        min: 0
+    },
+    anchorEnd: {
+        type: Number,
+        min: 0
+    },
     color: {
         type: String,
         default: '#ffff00' // Default highlight color

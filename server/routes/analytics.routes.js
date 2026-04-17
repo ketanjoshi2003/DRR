@@ -259,8 +259,18 @@ router.get('/overview', protect, authorize('admin', 'teacher'), async (req, res)
 // @access  Admin
 router.delete('/reset', protect, authorize('admin'), async (req, res) => {
     try {
-        await Session.deleteMany({});
-        res.json({ message: 'Analytics data cleared successfully' });
+        const [sessionResult, noteResult] = await Promise.all([
+            Session.deleteMany({}),
+            Note.deleteMany({})
+        ]);
+
+        res.json({
+            message: 'Analytics and notes data cleared successfully',
+            deleted: {
+                sessions: sessionResult.deletedCount || 0,
+                notes: noteResult.deletedCount || 0
+            }
+        });
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Server Error', error: error.message });

@@ -4,7 +4,6 @@ import api from '../api/axios';
 import { Upload, BarChart, FileText, Users, Clock, AlertCircle, CheckCircle, Search, GraduationCap, BookOpen, Trash2, RotateCcw, X, ChevronDown, ChevronUp, Eye, User, Download } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import BulkUpload from './BulkUpload';
-import CSVImporter from './CSVImporter';
 
 const AdminDashboard = ({ tab = 'upload' }) => {
     const { user } = useAuth();
@@ -31,7 +30,6 @@ const AdminDashboard = ({ tab = 'upload' }) => {
     const [expandedMaterial, setExpandedMaterial] = useState(null);
     const [teacherSearch, setTeacherSearch] = useState('');
     const [analyticsView, setAnalyticsView] = useState('students');
-    const [uploadSubTab, setUploadSubTab] = useState('files'); // 'files' or 'csv'
     const [generatingPdf, setGeneratingPdf] = useState(false);
 
     useEffect(() => {
@@ -115,15 +113,17 @@ const AdminDashboard = ({ tab = 'upload' }) => {
     };
 
     const handleResetAnalytics = async () => {
-        if (!window.confirm('Are you sure you want to PERMANENTLY delete all reading analytics and session history? This cannot be undone.')) {
+        if (!window.confirm('Are you sure you want to PERMANENTLY delete all reading analytics, session history, and user notes? This cannot be undone.')) {
             return;
         }
 
         try {
-            await api.delete('/analytics/reset');
+            const { data } = await api.delete('/analytics/reset');
             // Refresh counts and lists
             fetchStats();
-            alert('Analytics data has been reset.');
+            const deletedSessions = data?.deleted?.sessions ?? 0;
+            const deletedNotes = data?.deleted?.notes ?? 0;
+            alert(`Reset complete. Deleted ${deletedSessions} sessions and ${deletedNotes} notes.`);
         } catch (error) {
             console.error('Reset analytics error:', error);
             const message = error.response?.data?.message || error.message || 'Failed to reset analytics';
@@ -181,28 +181,26 @@ const AdminDashboard = ({ tab = 'upload' }) => {
 
             {tab === 'upload' && (
                 <div className="max-w-4xl">
-                    <div className="flex items-center gap-6 mb-8 border-b dark:border-zinc-800">
-                        <button
-                            onClick={() => setUploadSubTab('files')}
-                            className={`pb-4 text-sm font-bold transition-all relative ${uploadSubTab === 'files'
-                                ? 'text-brand-600 dark:text-brand-400'
-                                : 'text-gray-400 hover:text-gray-600 dark:hover:text-zinc-500'}`}
-                        >
-                            File Uploads
-                            {uploadSubTab === 'files' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-600 dark:bg-brand-400 rounded-full" />}
-                        </button>
-                        <button
-                            onClick={() => setUploadSubTab('csv')}
-                            className={`pb-4 text-sm font-bold transition-all relative ${uploadSubTab === 'csv'
-                                ? 'text-brand-600 dark:text-brand-400'
-                                : 'text-gray-400 hover:text-gray-600 dark:hover:text-zinc-500'}`}
-                        >
-                            CSV Data Mapping
-                            {uploadSubTab === 'csv' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-600 dark:bg-brand-400 rounded-full" />}
-                        </button>
+                    <div className="mb-4 rounded-xl border border-gray-200 dark:border-zinc-800 bg-gray-50/70 dark:bg-zinc-900/40 p-4">
+                        <p className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-zinc-500">Simple Upload Flow</p>
+                        <p className="text-sm text-gray-700 dark:text-zinc-300 mt-1">
+                            Use one screen for everything: select files, optionally add a Master CSV for filename mapping and hierarchy updates, then upload.
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-zinc-500 mt-2">
+                            Tip: use minimal template server/master-upload-minimal-template.csv (filename + subjectCode).
+                        </p>
                     </div>
 
-                    {uploadSubTab === 'files' ? <BulkUpload /> : <CSVImporter />}
+                    <div className="mb-6 rounded-xl border border-brand-100 dark:border-brand-900/20 bg-brand-50/50 dark:bg-brand-900/10 p-4">
+                        <p className="text-xs font-bold uppercase tracking-wider text-brand-700 dark:text-brand-300">3 Steps</p>
+                        <ol className="mt-2 text-sm text-brand-800 dark:text-brand-200 space-y-1 list-decimal pl-5">
+                            <li>Select all document files (PDF, DOC, image, audio, video).</li>
+                            <li>Optional: add one Master CSV with filename column.</li>
+                            <li>Click upload and review auto-mapped results.</li>
+                        </ol>
+                    </div>
+
+                    <BulkUpload />
                 </div>
             )}
 

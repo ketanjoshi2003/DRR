@@ -1,0 +1,12 @@
+filename,subjectCode,courseCode,semesterCode,title
+a-sample-file.pdf,SUBJECT_CODE_HERE,COURSE_CODE_OPTIONAL,SEMESTER_CODE_OPTIONAL,Optional custom title
+01-drr-problem-statement-and-value.pdf,DRR101,DRRSHOW,DRRSHOW-S1,Digital Reading Room Problem Statement and Value
+02-drr-user-personas-and-journey.pdf,DRR101,DRRSHOW,DRRSHOW-S1,User Personas and Reader Journey
+03-drr-system-architecture.pdf,DRR102,DRRSHOW,DRRSHOW-S1,System Architecture and Technical Design
+04-drr-feature-tour.pdf,DRR104,DRRSHOW,DRRSHOW-S1,Feature Tour and Reader Workflow
+05-drr-metadata-and-bulk-import.pdf,DRR103,DRRSHOW,DRRSHOW-S1,Metadata Management and Bulk Import
+06-drr-secure-reader-controls.pdf,DRR201,DRRSHOW,DRRSHOW-S2,Secure Reader Controls and Access Policies
+07-drr-search-ocr-and-indexing.pdf,DRR202,DRRSHOW,DRRSHOW-S2,Search OCR and Content Indexing
+08-drr-analytics-dashboard.pdf,DRR203,DRRSHOW,DRRSHOW-S2,Analytics Dashboard and Engagement Insights
+09-drr-presentation-script.pdf,DRR204,DRRSHOW,DRRSHOW-S2,Project Presentation Script and Demo Flow
+10-drr-roadmap-and-next-steps.pdf,DRR204,DRRSHOW,DRRSHOW-S2,Roadmap Next Steps and Expansion Plan

@@ -18,14 +18,25 @@ router.get('/:pdfId', protect, async (req, res) => {
 
 // Create a new note
 router.post('/', protect, async (req, res) => {
-    const { pdfId, selectedText, noteContent, pageNumber, color } = req.body;
+    const { pdfId, selectedText, noteContent, pageNumber, color, anchorStart, anchorEnd } = req.body;
     try {
+        const parsedAnchorStart = Number.parseInt(anchorStart, 10);
+        const parsedAnchorEnd = Number.parseInt(anchorEnd, 10);
+        const hasValidAnchor = Number.isInteger(parsedAnchorStart)
+            && Number.isInteger(parsedAnchorEnd)
+            && parsedAnchorStart >= 0
+            && parsedAnchorEnd > parsedAnchorStart;
+
         const newNote = new Note({
             user: req.user._id,
             pdf: pdfId,
             selectedText,
             noteContent,
             pageNumber,
+            ...(hasValidAnchor ? {
+                anchorStart: parsedAnchorStart,
+                anchorEnd: parsedAnchorEnd
+            } : {}),
             color
         });
         const savedNote = await newNote.save();

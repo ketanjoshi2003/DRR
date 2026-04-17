@@ -77,7 +77,7 @@ const getOverlayColor = (rawColor) => {
 };
 
 // Memoized Page Component — uses DOM-based highlighting after render
-const PageContent = memo(({ pageNumber, scale, pageNotes, selectionText, selectionColor }) => {
+const PageContent = memo(({ pageNumber, scale, pageNotes, selectionText, selectionColor, selectionAnchorStart, selectionAnchorEnd }) => {
     const pageContainerRef = useRef(null);
 
     // Apply highlights directly on the text layer DOM after render
@@ -98,6 +98,8 @@ const PageContent = memo(({ pageNumber, scale, pageNotes, selectionText, selecti
                 type: 'note',
                 title: note.noteContent || 'Note',
                 id: note._id,
+                anchorStart: note.anchorStart,
+                anchorEnd: note.anchorEnd,
                 color: getOverlayColor(note.color || DEFAULT_HIGHLIGHT_COLOR)
             });
         });
@@ -109,6 +111,8 @@ const PageContent = memo(({ pageNumber, scale, pageNotes, selectionText, selecti
                 type: 'selection',
                 title: 'New selection',
                 id: 'selection',
+                anchorStart: selectionAnchorStart,
+                anchorEnd: selectionAnchorEnd,
                 color: getOverlayColor(selectionColor || DEFAULT_HIGHLIGHT_COLOR)
             });
         }
@@ -121,6 +125,8 @@ const PageContent = memo(({ pageNumber, scale, pageNotes, selectionText, selecti
                 text: hl.text,
                 type: hl.type,
                 title: hl.title,
+                anchorStart: hl.anchorStart,
+                anchorEnd: hl.anchorEnd,
                 color: hl.color
             }))
         });
@@ -260,6 +266,19 @@ const PageContent = memo(({ pageNumber, scale, pageNotes, selectionText, selecti
 
         // For each highlight, find and wrap matches
         highlights.forEach(hl => {
+            const anchorStart = Number.parseInt(hl.anchorStart, 10);
+            const anchorEnd = Number.parseInt(hl.anchorEnd, 10);
+            const hasValidAnchor = Number.isInteger(anchorStart)
+                && Number.isInteger(anchorEnd)
+                && anchorStart >= 0
+                && anchorEnd > anchorStart
+                && anchorEnd <= fullText.length;
+
+            if (hasValidAnchor) {
+                applyHighlightRange(anchorStart, anchorEnd, hl);
+                return;
+            }
+
             const searchText = hl.text.trim().replace(/\s+/g, ' ');
             const searchLower = searchText.toLowerCase();
             if (searchLower.length === 0) return;
@@ -302,7 +321,7 @@ const PageContent = memo(({ pageNumber, scale, pageNotes, selectionText, selecti
         });
 
         textLayer.dataset.highlightSignature = highlightSignature;
-    }, [pageNotes, pageNumber, scale, selectionColor, selectionText]);
+    }, [pageNotes, pageNumber, scale, selectionAnchorEnd, selectionAnchorStart, selectionColor, selectionText]);
 
     // Re-apply highlights when notes/selection change
     useEffect(() => {
@@ -337,6 +356,8 @@ const PageContent = memo(({ pageNumber, scale, pageNotes, selectionText, selecti
     if (prevProps.scale !== nextProps.scale) return false;
     if (prevProps.selectionText !== nextProps.selectionText) return false;
     if (prevProps.selectionColor !== nextProps.selectionColor) return false;
+    if (prevProps.selectionAnchorStart !== nextProps.selectionAnchorStart) return false;
+    if (prevProps.selectionAnchorEnd !== nextProps.selectionAnchorEnd) return false;
     if (prevProps.pageNotes.length !== nextProps.pageNotes.length) return false;
 
     for (let i = 0; i < prevProps.pageNotes.length; i++) {
@@ -347,6 +368,8 @@ const PageContent = memo(({ pageNumber, scale, pageNotes, selectionText, selecti
         if (prevNote.selectedText !== nextNote.selectedText) return false;
         if (prevNote.noteContent !== nextNote.noteContent) return false;
         if (prevNote.color !== nextNote.color) return false;
+        if (prevNote.anchorStart !== nextNote.anchorStart) return false;
+        if (prevNote.anchorEnd !== nextNote.anchorEnd) return false;
     }
 
     return true;
@@ -611,21 +634,63 @@ const PDFReader = () => {
     const handleMouseUp = () => {
         const sel = window.getSelection();
         if (sel && sel.toString().trim().length > 0) {
-            let pageNum = pageNumber; // default to current state
+            const range = sel.rangeCount > 0 ? sel.getRangeAt(0) : null;
+            const anchorNode = range?.startContainer || sel.anchorNode;
+            const element = anchorNode?.nodeType === 1 ? anchorNode : anchorNode?.parentElement;
+            const pageEl = element?.closest?.('[data-page-number]');
 
-            // More robust page detection using .closest()
-            // We need to find the node starting from anchorNode's parent
-            const anchorNode = sel.anchorNode;
-            const element = anchorNode.nodeType === 1 ? anchorNode : anchorNode.parentElement;
-
-            const pageEl = element.closest('[data-page-number]');
-            if (pageEl) {
-                pageNum = parseInt(pageEl.getAttribute('data-page-number'));
+            // Ignore selections outside the PDF text layer (for example side panel text).
+            if (!pageEl || !range) {
+                return;
             }
+
+            const textLayer = pageEl.querySelector('.react-pdf__Page__textContent');
+            const selectionInTextLayer = textLayer
+                && textLayer.contains(range.startContainer)
+                && textLayer.contains(range.endContainer);
+
+            if (!selectionInTextLayer) {
+                return;
+            }
+
+            let anchorStart = null;
+            let anchorEnd = null;
+
+            const treeWalker = document.createTreeWalker(
+                textLayer,
+                NodeFilter.SHOW_TEXT,
+                null,
+                false
+            );
+
+            let position = 0;
+            let textNode;
+            while ((textNode = treeWalker.nextNode())) {
+                const nodeLength = textNode.textContent.length;
+                if (nodeLength === 0) continue;
+
+                if (textNode === range.startContainer) {
+                    anchorStart = position + Math.min(range.startOffset, nodeLength);
+                }
+
+                if (textNode === range.endContainer) {
+                    anchorEnd = position + Math.min(range.endOffset, nodeLength);
+                }
+
+                position += nodeLength;
+            }
+
+            const hasValidAnchors = Number.isInteger(anchorStart)
+                && Number.isInteger(anchorEnd)
+                && anchorEnd > anchorStart;
+
+            const pageNum = parseInt(pageEl.getAttribute('data-page-number'), 10) || pageNumber;
 
             setSelection({
                 text: sel.toString(),
-                page: pageNum
+                page: pageNum,
+                anchorStart: hasValidAnchors ? anchorStart : null,
+                anchorEnd: hasValidAnchors ? anchorEnd : null
             });
         }
     };
@@ -638,6 +703,8 @@ const PDFReader = () => {
                 selectedText: selection.text,
                 noteContent: noteText,
                 pageNumber: selection.page,
+                anchorStart: selection.anchorStart,
+                anchorEnd: selection.anchorEnd,
                 color: selectedHighlightColor
             });
             setNotes((prevNotes) => [data, ...prevNotes]);
@@ -882,6 +949,8 @@ const PDFReader = () => {
                                     pageNotes={notesByPage.get(index + 1) || EMPTY_PAGE_NOTES}
                                     selectionText={selection?.page === index + 1 ? selection.text : ''}
                                     selectionColor={selectedHighlightColor}
+                                    selectionAnchorStart={selection?.page === index + 1 ? selection.anchorStart : null}
+                                    selectionAnchorEnd={selection?.page === index + 1 ? selection.anchorEnd : null}
                                 />
                                 <div className="absolute bottom-4 right-4 bg-black/50 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
                                     Page {index + 1}
