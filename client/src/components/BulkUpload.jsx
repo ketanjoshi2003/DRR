@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import api from '../api/axios';
-import { Upload, X, CheckCircle, AlertCircle, FileText, Loader, GraduationCap, Book } from 'lucide-react';
+import { Upload, X, CheckCircle, AlertCircle, FileText, Loader, GraduationCap, Book, Plus } from 'lucide-react';
 import CustomSelect from './CustomSelect';
 
 const DOCUMENT_MIME_TYPES = [
@@ -29,6 +29,18 @@ const isCsvFile = (file) => {
 const isDocumentFile = (file) => DOCUMENT_MIME_TYPES.includes(file.type);
 
 const normalizeFilename = (value) => String(value || '').trim().toLowerCase();
+const FILENAME_HEADERS = ['filename', 'file', 'originalname', 'original_name'];
+const HIERARCHY_HEADERS = ['coursecode', 'course_code', 'semestercode', 'semester_code', 'subjectcode', 'subject_code'];
+
+const hasAnyHeader = (headers, acceptedHeaders) => acceptedHeaders.some((header) => headers.includes(header));
+
+const pickCsvValue = (row, keys) => {
+    for (const key of keys) {
+        const value = row?.[key];
+        if (value) return value;
+    }
+    return '';
+};
 
 const splitCsvLine = (line, separator) => {
     const values = [];
@@ -118,6 +130,16 @@ const BulkUpload = () => {
     const [subjects, setSubjects] = useState([]);
     const [selectedCourse, setSelectedCourse] = useState('');
     const [selectedSubject, setSelectedSubject] = useState('');
+    const [assignmentMode, setAssignmentMode] = useState('existing');
+    const [newPath, setNewPath] = useState({
+        courseCode: '',
+        courseName: '',
+        courseDesc: '',
+        semesterCode: '',
+        semesterName: '',
+        subjectCode: '',
+        subjectName: ''
+    });
     const fileInputRef = useRef(null);
     const mappingInputRef = useRef(null);
 
@@ -167,8 +189,11 @@ const BulkUpload = () => {
                 return;
             }
 
-            if (!parsed.headers.includes('filename')) {
-                setMappingParseError('CSV must include a filename column for material matching.');
+            const hasFilenameHeader = hasAnyHeader(parsed.headers, FILENAME_HEADERS);
+            const hasHierarchyHeader = hasAnyHeader(parsed.headers, HIERARCHY_HEADERS);
+
+            if (!hasFilenameHeader && !hasHierarchyHeader) {
+                setMappingParseError('CSV needs a filename column or course/semester/subject columns.');
             }
         } catch (error) {
             console.error('Failed to parse mapping CSV:', error);
@@ -247,7 +272,7 @@ const BulkUpload = () => {
     };
 
     const handleBulkUpload = async () => {
-        if (files.length === 0) return;
+        if (files.length === 0 && !mappingFile) return;
 
         setUploading(true);
         setUploadResults(null);
@@ -267,8 +292,16 @@ const BulkUpload = () => {
             viewOnly: false
         }));
 
-        if (selectedCourse) formData.append('courseCode', selectedCourse);
-        if (selectedSubject) formData.append('subjectCode', selectedSubject);
+        if (assignmentMode === 'create') {
+            formData.append('createHierarchy', 'true');
+            Object.entries(newPath).forEach(([key, value]) => {
+                const trimmed = String(value || '').trim();
+                if (trimmed) formData.append(key, trimmed);
+            });
+        } else {
+            if (selectedCourse) formData.append('courseCode', selectedCourse);
+            if (selectedSubject) formData.append('subjectCode', selectedSubject);
+        }
 
         try {
             const { data } = await api.post('/pdfs/bulk-upload', formData, {
@@ -282,10 +315,22 @@ const BulkUpload = () => {
             setUploadResults(data);
             setFiles([]);
             clearMapping();
+            setNewPath({
+                courseCode: '',
+                courseName: '',
+                courseDesc: '',
+                semesterCode: '',
+                semesterName: '',
+                subjectCode: '',
+                subjectName: ''
+            });
             if (fileInputRef.current) fileInputRef.current.value = '';
         } catch (error) {
             console.error('Bulk upload error:', error);
-            const errorMessage = error.response?.data?.message || error.message || 'Upload failed';
+            const errorMessage = error.response?.data?.error
+                || error.response?.data?.message
+                || error.message
+                || 'Upload failed';
 
             setUploadResults({
                 message: errorMessage,
@@ -314,10 +359,14 @@ const BulkUpload = () => {
     const mappingPreview = useMemo(() => {
         if (!mappingFile) return null;
 
-        const hasFilenameColumn = mappingHeaders.includes('filename');
+        const hasFilenameColumn = hasAnyHeader(mappingHeaders, FILENAME_HEADERS);
+        const hasHierarchyColumn = hasAnyHeader(mappingHeaders, HIERARCHY_HEADERS);
+
         if (!hasFilenameColumn) {
             return {
                 hasFilenameColumn: false,
+                hasHierarchyColumn,
+                isUsable: hasHierarchyColumn,
                 uniqueCsvRows: 0,
                 matchedSelectedFiles: 0,
                 uploadsWithoutCsvMatch: files.length,
@@ -329,7 +378,7 @@ const BulkUpload = () => {
 
         const uniqueCsvKeys = Array.from(new Set(
             mappingRows
-                .map((row) => normalizeFilename(row.filename))
+                .map((row) => normalizeFilename(pickCsvValue(row, FILENAME_HEADERS)))
                 .filter(Boolean)
         ));
 
@@ -352,6 +401,8 @@ const BulkUpload = () => {
 
         return {
             hasFilenameColumn: true,
+            hasHierarchyColumn,
+            isUsable: true,
             uniqueCsvRows: uniqueCsvKeys.length,
             matchedSelectedFiles,
             uploadsWithoutCsvMatch,
@@ -366,32 +417,26 @@ const BulkUpload = () => {
     const mappingSummary = uploadResults?.mappingSummary;
     const hierarchySummary = uploadResults?.hierarchySummary;
     const hasSelectedDocuments = files.length > 0;
-    const canUpload = hasSelectedDocuments
+    const newPathReady = assignmentMode !== 'create'
+        || (newPath.courseCode.trim() && newPath.semesterCode.trim() && newPath.subjectCode.trim());
+    const canUpload = (hasSelectedDocuments || mappingFile)
         && !uploading
-        && (!mappingFile || (!parsingMapping && !mappingParseError && mappingPreview?.hasFilenameColumn !== false));
+        && newPathReady
+        && (!mappingFile || (!parsingMapping && !mappingParseError && mappingPreview?.isUsable !== false));
     const autoMappedPreview = mappingPreview?.matchedSelectedFiles || 0;
     const fallbackPreview = Math.max(files.length - autoMappedPreview, 0);
 
     return (
-        <div className="max-w-4xl mx-auto">
-            <div className="mb-6">
+        <div className="max-w-5xl mx-auto">
+            <div className="mb-5 flex flex-col gap-1">
                 <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Upload Materials</h2>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 transition-colors">
-                    One screen, one flow. Upload files and optionally attach one Master CSV for filename mapping and hierarchy updates.
+                <p className="text-sm text-gray-600 dark:text-gray-400 transition-colors">
+                    Add files, map them with one optional Master CSV, and assign them in the same pass.
                 </p>
             </div>
 
-            <div className="mb-6 rounded-xl border border-brand-100 dark:border-brand-900/20 bg-brand-50/50 dark:bg-brand-900/10 p-4">
-                <p className="text-xs font-bold uppercase tracking-wider text-brand-700 dark:text-brand-300">Quick Steps</p>
-                <ol className="mt-2 list-decimal pl-5 space-y-1 text-sm text-brand-800 dark:text-brand-200">
-                    <li>Select all document files you want to upload.</li>
-                    <li>Optional: select one Master CSV with a filename column.</li>
-                    <li>Upload and check the auto-mapping summary.</li>
-                </ol>
-            </div>
-
             <div
-                className={`relative border-2 border-dashed rounded-xl p-10 text-center transition-all duration-150 ${dragActive
+                className={`relative border-2 border-dashed rounded-xl p-8 text-center transition-all duration-150 ${dragActive
                     ? 'border-brand-500 bg-brand-50 dark:bg-brand-500/10'
                     : 'border-gray-300 dark:border-zinc-800 hover:border-gray-400 dark:hover:border-zinc-700 bg-white dark:bg-zinc-950/50'
                     }`}
@@ -402,13 +447,13 @@ const BulkUpload = () => {
             >
                 <div className="space-y-4">
                     <div className="flex justify-center">
-                        <Upload className={`h-16 w-16 transition-colors duration-150 ${dragActive ? 'text-brand-500' : 'text-gray-400 dark:text-zinc-600'}`} />
+                        <Upload className={`h-12 w-12 transition-colors duration-150 ${dragActive ? 'text-brand-500' : 'text-gray-400 dark:text-zinc-600'}`} />
                     </div>
                     <div>
                         <p className="text-lg font-medium text-gray-900 dark:text-gray-100 transition-colors">
                             {dragActive ? 'Drop files here' : 'Drag and drop files'}
                         </p>
-                        <p className="text-sm text-gray-500 dark:text-zinc-500 mt-1">Document files are required. Master CSV is optional.</p>
+                        <p className="text-sm text-gray-500 dark:text-zinc-500 mt-1">Drop documents and a CSV together, or choose them below.</p>
                     </div>
                     <div className="flex flex-wrap justify-center gap-3">
                         <button
@@ -444,47 +489,112 @@ const BulkUpload = () => {
                         className="hidden"
                     />
                     <p className="text-xs text-gray-500 dark:text-zinc-500 transition-colors">
-                        Supports PDF, EPUB, DOC, Images, Audio, and Video files up to 50MB each. Minimal CSV for exact mapping: filename + subjectCode.
+                        CSV matching uses filename; subject codes automatically pull the right course and semester.
                     </p>
                 </div>
             </div>
 
             <div className="mt-6 rounded-xl border border-gray-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/30 p-5">
-                <div>
-                    <h3 className="text-sm font-bold text-gray-900 dark:text-zinc-100 uppercase tracking-wider">Assign To Existing Course and Subject (Optional)</h3>
-                    <p className="text-xs text-gray-500 dark:text-zinc-500 mt-1">
-                        This assignment is used for new materials, and as fallback when a file is not matched by CSV filename.
-                    </p>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <div>
+                        <h3 className="text-sm font-bold text-gray-900 dark:text-zinc-100 uppercase tracking-wider">Create or Assign</h3>
+                        <p className="text-xs text-gray-500 dark:text-zinc-500 mt-1">Used for files without a CSV match.</p>
+                    </div>
+                    <div className="inline-flex rounded-lg border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 p-1">
+                        <button
+                            type="button"
+                            onClick={() => setAssignmentMode('existing')}
+                            className={`inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-xs font-bold transition-colors ${assignmentMode === 'existing'
+                                ? 'bg-brand-600 text-white'
+                                : 'text-gray-600 dark:text-zinc-400 hover:bg-gray-100 dark:hover:bg-zinc-900'
+                                }`}
+                        >
+                            <Book className="h-3.5 w-3.5" />
+                            Existing
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setAssignmentMode('create')}
+                            className={`inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-xs font-bold transition-colors ${assignmentMode === 'create'
+                                ? 'bg-brand-600 text-white'
+                                : 'text-gray-600 dark:text-zinc-400 hover:bg-gray-100 dark:hover:bg-zinc-900'
+                                }`}
+                        >
+                            <Plus className="h-3.5 w-3.5" />
+                            New Path
+                        </button>
+                    </div>
                 </div>
 
-                <div className="mt-5 grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                        <label className="text-xs font-bold text-gray-500 dark:text-zinc-400 uppercase tracking-widest ml-1">Course</label>
-                        <CustomSelect
-                            options={[{ value: '', label: 'No Course Assigned' }, ...courses.map((course) => ({ value: course.code, label: `${course.name} - ${course.code}` }))]}
-                            value={selectedCourse}
-                            onChange={(val) => {
-                                setSelectedCourse(val);
-                                setSelectedSubject('');
-                            }}
-                            icon={GraduationCap}
-                            placeholder="Search or Select Course"
-                        />
+                {assignmentMode === 'existing' ? (
+                    <div className="mt-5 grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold text-gray-500 dark:text-zinc-400 uppercase tracking-widest ml-1">Course</label>
+                            <CustomSelect
+                                options={[{ value: '', label: 'No Course Assigned' }, ...courses.map((course) => ({ value: course.code, label: `${course.name} - ${course.code}` }))]}
+                                value={selectedCourse}
+                                onChange={(val) => {
+                                    setSelectedCourse(val);
+                                    setSelectedSubject('');
+                                }}
+                                icon={GraduationCap}
+                                placeholder="Search or Select Course"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold text-gray-500 dark:text-zinc-400 uppercase tracking-widest ml-1">Subject</label>
+                            <CustomSelect
+                                options={[{ value: '', label: 'No Subject Assigned' }, ...subjects
+                                    .filter((subject) => !selectedCourse || subject.courseCode === selectedCourse)
+                                    .map((subject) => ({ value: subject.code, label: `${subject.name} - ${subject.code}` }))
+                                ]}
+                                value={selectedSubject}
+                                onChange={(val) => {
+                                    setSelectedSubject(val);
+                                    const subject = subjects.find((item) => item.code === val);
+                                    if (subject?.courseCode) {
+                                        setSelectedCourse(subject.courseCode);
+                                    }
+                                }}
+                                icon={Book}
+                                placeholder="Search or Select Subject"
+                            />
+                        </div>
                     </div>
-                    <div className="space-y-2">
-                        <label className="text-xs font-bold text-gray-500 dark:text-zinc-400 uppercase tracking-widest ml-1">Subject</label>
-                        <CustomSelect
-                            options={[{ value: '', label: 'No Subject Assigned' }, ...subjects
-                                .filter((subject) => !selectedCourse || subject.courseCode === selectedCourse)
-                                .map((subject) => ({ value: subject.code, label: `${subject.name} - ${subject.code}` }))
-                            ]}
-                            value={selectedSubject}
-                            onChange={setSelectedSubject}
-                            icon={Book}
-                            placeholder="Search or Select Subject"
-                        />
+                ) : (
+                    <div className="mt-5 grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {[
+                            ['courseCode', 'Course Code'],
+                            ['courseName', 'Course Name'],
+                            ['courseDesc', 'Course Description'],
+                            ['semesterCode', 'Semester Code'],
+                            ['semesterName', 'Semester Name'],
+                            ['subjectCode', 'Subject Code'],
+                            ['subjectName', 'Subject Name']
+                        ].map(([key, label]) => (
+                            <div key={key} className="space-y-1.5">
+                                <label className="text-xs font-bold text-gray-500 dark:text-zinc-400 uppercase tracking-widest ml-1">{label}</label>
+                                <input
+                                    type="text"
+                                    value={newPath[key]}
+                                    onChange={(event) => {
+                                        const nextValue = key.endsWith('Code')
+                                            ? event.target.value.toUpperCase()
+                                            : event.target.value;
+                                        setNewPath((prev) => ({ ...prev, [key]: nextValue }));
+                                    }}
+                                    className="block w-full rounded-lg border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/10"
+                                    placeholder={key.endsWith('Code') ? 'Required' : 'Optional'}
+                                />
+                            </div>
+                        ))}
+                        {!newPathReady && (
+                            <p className="md:col-span-3 text-xs font-semibold text-amber-700 dark:text-amber-300">
+                                New path needs course, semester, and subject codes.
+                            </p>
+                        )}
                     </div>
-                </div>
+                )}
             </div>
 
             {mappingFile && (
@@ -537,6 +647,14 @@ const BulkUpload = () => {
                                 <p className="text-sm text-amber-700 dark:text-amber-300">Needs fallback or manual review: {mappingPreview.uploadsWithoutCsvMatch}</p>
                                 <p className="text-xs text-gray-600 dark:text-zinc-400">Unused CSV rows: {mappingPreview.unusedCsvRows}</p>
                                 <p className="text-xs text-blue-700 dark:text-blue-300">Exact mapping tip: subjectCode determines the correct course and semester.</p>
+                            </div>
+                        )}
+
+                        {!parsingMapping && !mappingParseError && !mappingPreview?.hasFilenameColumn && mappingPreview?.hasHierarchyColumn && (
+                            <div className="rounded-lg border border-blue-100 dark:border-blue-900/20 bg-white/90 dark:bg-zinc-950/60 p-3 space-y-1.5">
+                                <p className="text-xs font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400">Hierarchy CSV Ready</p>
+                                <p className="text-sm text-blue-900 dark:text-blue-200">Courses, semesters, and subjects will be created or updated.</p>
+                                <p className="text-xs text-amber-700 dark:text-amber-300">Files without filename matches will use the selected assignment fallback.</p>
                             </div>
                         )}
                     </div>
@@ -611,6 +729,11 @@ const BulkUpload = () => {
                                 <Loader className="animate-spin h-5 w-5 mr-2" />
                                 Processing {files.length} file{files.length !== 1 ? 's' : ''}...
                             </>
+                        ) : hasSelectedDocuments && !newPathReady ? (
+                            <>
+                                <Plus className="h-5 w-5 mr-2" />
+                                Complete New Path To Continue
+                            </>
                         ) : hasSelectedDocuments ? (
                             <>
                                 <Upload className="h-5 w-5 mr-2" />
@@ -618,6 +741,11 @@ const BulkUpload = () => {
                                 {mappingFile && !mappingParseError && !parsingMapping
                                     ? ` (${autoMappedPreview} auto-mapped, ${fallbackPreview} fallback)`
                                     : ''}
+                            </>
+                        ) : mappingFile ? (
+                            <>
+                                <Upload className="h-5 w-5 mr-2" />
+                                Create / Update Hierarchy
                             </>
                         ) : (
                             <>
@@ -712,10 +840,10 @@ const BulkUpload = () => {
                         {mappingSummary?.invalidMappings > 0 && (
                             <div className="rounded-lg border border-amber-200 dark:border-amber-900/20 bg-amber-50 dark:bg-amber-900/10 p-3">
                                 <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">
-                                    {mappingSummary.invalidMappings} CSV mapping row(s) were ignored due to course/semester/subject mismatch.
+                                    {mappingSummary.invalidMappings} CSV row(s) completed with mapping warnings.
                                 </p>
                                 <p className="text-xs text-amber-700 dark:text-amber-400 mt-1">
-                                    Check subjectCode with matching courseCode and semesterCode, or keep only filename + subjectCode.
+                                    Subject code stays authoritative; mismatched course or semester checks are corrected during upload.
                                 </p>
                             </div>
                         )}
@@ -749,9 +877,19 @@ const BulkUpload = () => {
                                                                 Auto-mapped
                                                             </span>
                                                         )}
+                                                        {result.fallbackApplied && (
+                                                            <span className="text-[10px] px-2 py-1 rounded-full bg-gray-100 dark:bg-zinc-800 text-gray-700 dark:text-zinc-300 font-bold uppercase tracking-wider">
+                                                                Assigned
+                                                            </span>
+                                                        )}
                                                         {result.courseCode && (
                                                             <span className="text-[10px] px-2 py-1 rounded-full bg-indigo-100 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 font-bold">
                                                                 {result.courseCode}
+                                                            </span>
+                                                        )}
+                                                        {result.semesterCode && (
+                                                            <span className="text-[10px] px-2 py-1 rounded-full bg-sky-100 dark:bg-sky-900/20 text-sky-700 dark:text-sky-300 font-bold">
+                                                                {result.semesterCode}
                                                             </span>
                                                         )}
                                                         {result.subjectCode && (

@@ -23,7 +23,7 @@ router.get('/', async (req, res) => {
 router.post('/', protect, async (req, res) => {
     const { name, code, description, courseId } = req.body;
 
-    if (req.user.role !== 'admin') {
+    if (req.user.role !== 'admin' && req.user.role !== 'teacher') {
         return res.status(403).json({ message: 'Access denied' });
     }
 
@@ -44,7 +44,7 @@ router.post('/', protect, async (req, res) => {
 // Upload CSV to import semesters
 // Expected CSV headers: name, code, description, courseCode
 router.post('/upload', protect, upload.single('file'), async (req, res) => {
-    if (req.user.role !== 'admin') {
+    if (req.user.role !== 'admin' && req.user.role !== 'teacher') {
         return res.status(403).json({ message: 'Access denied' });
     }
 
@@ -134,7 +134,7 @@ router.post('/upload', protect, upload.single('file'), async (req, res) => {
 // Delete all semesters
 // Delete semesters (all or specific list)
 router.delete('/', protect, async (req, res) => {
-    if (req.user.role !== 'admin') {
+    if (req.user.role !== 'admin' && req.user.role !== 'teacher') {
         return res.status(403).json({ message: 'Access denied' });
     }
 

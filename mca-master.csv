@@ -1,0 +1,13 @@
+coursecode,coursename,coursedescription,semestercode,semestername,subjectcode,subjectname
+MCA,Master of Computer Applications,Post Graduate Degree in Computer Applications,SEM1,Semester 1,MCA101,Programming in C
+MCA,Master of Computer Applications,Post Graduate Degree in Computer Applications,SEM1,Semester 1,MCA102,Database Management Systems
+MCA,Master of Computer Applications,Post Graduate Degree in Computer Applications,SEM1,Semester 1,MCA103,Computer Organization and Architecture
+MCA,Master of Computer Applications,Post Graduate Degree in Computer Applications,SEM2,Semester 2,MCA201,Object Oriented Programming with C++
+MCA,Master of Computer Applications,Post Graduate Degree in Computer Applications,SEM2,Semester 2,MCA202,Data Structures
+MCA,Master of Computer Applications,Post Graduate Degree in Computer Applications,SEM2,Semester 2,MCA203,Operating Systems
+MCA,Master of Computer Applications,Post Graduate Degree in Computer Applications,SEM3,Semester 3,MCA301,Java Programming
+MCA,Master of Computer Applications,Post Graduate Degree in Computer Applications,SEM3,Semester 3,MCA302,Software Engineering
+MCA,Master of Computer Applications,Post Graduate Degree in Computer Applications,SEM3,Semester 3,MCA303,Computer Networks
+MCA,Master of Computer Applications,Post Graduate Degree in Computer Applications,SEM4,Semester 4,MCA401,Web Technologies
+MCA,Master of Computer Applications,Post Graduate Degree in Computer Applications,SEM4,Semester 4,MCA402,Artificial Intelligence
+MCA,Master of Computer Applications,Post Graduate Degree in Computer Applications,SEM4,Semester 4,MCA403,Major Project

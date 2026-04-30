@@ -30,7 +30,19 @@ const allowedCsvTypes = [
     'text/plain'
 ];
 
+const mimeToType = {
+    'application/pdf': 'pdf',
+    'application/epub+zip': 'epub',
+    'application/msword': 'doc',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'doc',
+    'image/jpeg': 'image',
+    'image/png': 'image',
+    'audio/mpeg': 'audio',
+    'video/mp4': 'video'
+};
+
 const buildFilenameKey = (value) => String(value || '').trim().toLowerCase();
+const normalizeCode = (value) => String(value || '').trim().toUpperCase();
 
 const pickRowValue = (row, keys = []) => {
     for (const key of keys) {
@@ -42,28 +54,25 @@ const pickRowValue = (row, keys = []) => {
     return '';
 };
 
-const getCourseCodeFromRow = (row) => pickRowValue(row, ['coursecode', 'course_code']);
+const getCourseCodeFromRow = (row) => normalizeCode(pickRowValue(row, ['coursecode', 'course_code']));
 const getCourseNameFromRow = (row) => pickRowValue(row, ['coursename', 'course_name', 'course']);
-const getCourseDescriptionFromRow = (row) => pickRowValue(row, ['coursedescription', 'course_description']);
+const getCourseDescFromRow = (row) => pickRowValue(row, ['coursedescription', 'course_description', 'coursedesc']);
 
-const getSemesterCodeFromRow = (row) => pickRowValue(row, ['semestercode', 'semester_code']);
+const getSemesterCodeFromRow = (row) => normalizeCode(pickRowValue(row, ['semestercode', 'semester_code']));
 const getSemesterNameFromRow = (row) => pickRowValue(row, ['semestername', 'semester_name', 'semester']);
-const getSemesterDescriptionFromRow = (row) => pickRowValue(row, ['semesterdescription', 'semester_description']);
 
-const getSubjectCodeFromRow = (row) => pickRowValue(row, ['subjectcode', 'subject_code']);
+const getSubjectCodeFromRow = (row) => normalizeCode(pickRowValue(row, ['subjectcode', 'subject_code']));
 const getSubjectNameFromRow = (row) => pickRowValue(row, ['subjectname', 'subject_name', 'subject']);
-const getSubjectDescriptionFromRow = (row) => pickRowValue(row, ['subjectdescription', 'subject_description']);
 
 const getFilenameFromRow = (row) => pickRowValue(row, ['filename', 'file', 'originalname', 'original_name']);
 const getTypeFromRow = (row) => pickRowValue(row, ['type', 'materialtype', 'material_type']);
 const getTitleFromRow = (row) => pickRowValue(row, ['title', 'materialtitle', 'material_title']);
 
-const buildSubjectLookup = async (rows = []) => {
-    const subjectCodes = Array.from(new Set(
-        rows
-            .map((row) => getSubjectCodeFromRow(row))
-            .filter(Boolean)
-    ));
+const buildSubjectLookup = async (rows = [], extraSubjectCodes = []) => {
+    const subjectCodes = Array.from(new Set([
+        ...rows.map((row) => getSubjectCodeFromRow(row)),
+        ...extraSubjectCodes.map((code) => normalizeCode(code))
+    ].filter(Boolean)));
 
     if (subjectCodes.length === 0) {
         return new Map();
@@ -118,6 +127,52 @@ const applyBulkWriteSummary = (bucket, result) => {
     bucket.matched = result?.matchedCount || 0;
 };
 
+const mergeHierarchySummaries = (...summaries) => {
+    const merged = createHierarchySummary();
+
+    summaries.filter(Boolean).forEach((summary) => {
+        ['courses', 'semesters', 'subjects'].forEach((section) => {
+            Object.keys(merged[section]).forEach((key) => {
+                merged[section][key] += summary[section]?.[key] || 0;
+            });
+        });
+
+        merged.issueCount += summary.issueCount || 0;
+        (summary.issues || []).forEach((issue) => {
+            if (merged.issues.length < 20) {
+                merged.issues.push(issue);
+            }
+        });
+    });
+
+    return merged;
+};
+
+const hasHierarchyActivity = (summary) => Boolean(summary && (
+    summary.courses.processed
+    || summary.semesters.processed
+    || summary.subjects.processed
+    || summary.issueCount
+));
+
+const buildInlineHierarchyRows = (body = {}) => {
+    if (body.createHierarchy !== 'true') {
+        return [];
+    }
+
+    const row = {
+        coursecode: String(body.courseCode || '').trim(),
+        coursename: String(body.courseName || '').trim(),
+        coursedescription: String(body.courseDesc || '').trim(),
+        semestercode: String(body.semesterCode || '').trim(),
+        semestername: String(body.semesterName || '').trim(),
+        subjectcode: String(body.subjectCode || '').trim(),
+        subjectname: String(body.subjectName || '').trim()
+    };
+
+    return Object.values(row).some(Boolean) ? [row] : [];
+};
+
 const upsertHierarchyFromRows = async (rows = []) => {
     const summary = createHierarchySummary();
     if (!Array.isArray(rows) || rows.length === 0) {
@@ -139,10 +194,10 @@ const upsertHierarchyFromRows = async (rows = []) => {
         };
 
         const courseName = getCourseNameFromRow(row);
-        const courseDescription = getCourseDescriptionFromRow(row);
+        const courseDesc = getCourseDescFromRow(row);
 
         if (!existing.name && courseName) existing.name = courseName;
-        if (!existing.description && courseDescription) existing.description = courseDescription;
+        if (!existing.description && courseDesc) existing.description = courseDesc;
 
         courseRecords.set(courseCode, existing);
     });
@@ -157,8 +212,7 @@ const upsertHierarchyFromRows = async (rows = []) => {
             const update = {
                 $setOnInsert: {
                     code: entry.code,
-                    name: entry.name || entry.code,
-                    ...(entry.description ? { description: entry.description } : {})
+                    ...(!entry.name ? { name: entry.code } : {})
                 }
             };
             if (Object.keys(setUpdate).length > 0) {
@@ -240,18 +294,16 @@ const upsertHierarchyFromRows = async (rows = []) => {
         }
 
         const semesterName = getSemesterNameFromRow(row);
-        const semesterDescription = getSemesterDescriptionFromRow(row);
 
         const next = existing || {
             code: semesterCode,
             name: '',
-            description: '',
+            
             courseCode,
             courseId
         };
 
         if (!next.name && semesterName) next.name = semesterName;
-        if (!next.description && semesterDescription) next.description = semesterDescription;
         next.courseCode = courseCode;
         next.courseId = courseId;
 
@@ -265,15 +317,12 @@ const upsertHierarchyFromRows = async (rows = []) => {
                 course: entry.courseId
             };
             if (entry.name) setUpdate.name = entry.name;
-            if (entry.description) setUpdate.description = entry.description;
 
             const update = {
                 $set: setUpdate,
                 $setOnInsert: {
                     code: entry.code,
-                    name: entry.name || entry.code,
-                    course: entry.courseId,
-                    ...(entry.description ? { description: entry.description } : {})
+                    ...(!entry.name ? { name: entry.code } : {})
                 }
             };
 
@@ -380,18 +429,16 @@ const upsertHierarchyFromRows = async (rows = []) => {
         }
 
         const subjectName = getSubjectNameFromRow(row);
-        const subjectDescription = getSubjectDescriptionFromRow(row);
 
         const next = existing || {
             code: subjectCode,
             name: '',
-            description: '',
+            
             courseCode,
             semesterCode
         };
 
         if (!next.name && subjectName) next.name = subjectName;
-        if (!next.description && subjectDescription) next.description = subjectDescription;
         next.courseCode = courseCode;
         next.semesterCode = semesterCode;
 
@@ -406,16 +453,12 @@ const upsertHierarchyFromRows = async (rows = []) => {
                 semesterCode: entry.semesterCode
             };
             if (entry.name) setUpdate.name = entry.name;
-            if (entry.description) setUpdate.description = entry.description;
 
             const update = {
                 $set: setUpdate,
                 $setOnInsert: {
                     code: entry.code,
-                    name: entry.name || entry.code,
-                    courseCode: entry.courseCode,
-                    semesterCode: entry.semesterCode,
-                    ...(entry.description ? { description: entry.description } : {})
+                    ...(!entry.name ? { name: entry.code } : {})
                 }
             };
 
@@ -511,28 +554,30 @@ const buildMaterialUpdateFromRow = (row, subjectLookup = new Map()) => {
 
     let resolvedCourseCode = explicitCourseCode;
     let resolvedSemesterCode = explicitSemesterCode;
+    let resolvedSubjectCode = '';
 
     if (subjectCode) {
         const subject = subjectLookup.get(subjectCode);
         if (!subject) {
-            issues.push(`subjectCode "${subjectCode}" not found`);
+            issues.push(`subjectCode "${subjectCode}" was not found; subject assignment was skipped`);
         } else {
             if (explicitCourseCode && explicitCourseCode !== subject.courseCode) {
-                issues.push(`subjectCode "${subjectCode}" belongs to courseCode "${subject.courseCode}", not "${explicitCourseCode}"`);
+                issues.push(`subjectCode "${subjectCode}" belongs to courseCode "${subject.courseCode}", not "${explicitCourseCode}"; using subject course`);
             }
 
             if (explicitSemesterCode && explicitSemesterCode !== subject.semesterCode) {
-                issues.push(`subjectCode "${subjectCode}" belongs to semesterCode "${subject.semesterCode}", not "${explicitSemesterCode}"`);
+                issues.push(`subjectCode "${subjectCode}" belongs to semesterCode "${subject.semesterCode}", not "${explicitSemesterCode}"; using subject semester`);
             }
 
             resolvedCourseCode = subject.courseCode;
             resolvedSemesterCode = subject.semesterCode;
+            resolvedSubjectCode = subject.code;
         }
     }
 
     if (title) update.title = title;
     if (resolvedCourseCode) update.courseCode = resolvedCourseCode;
-    if (subjectCode) update.subjectCode = subjectCode;
+    if (resolvedSubjectCode) update.subjectCode = resolvedSubjectCode;
     if (type) update.type = type;
 
     const metadata = {};
@@ -556,9 +601,18 @@ const buildMaterialUpdateFromRow = (row, subjectLookup = new Map()) => {
         derived: {
             courseCode: resolvedCourseCode || '',
             semesterCode: resolvedSemesterCode || '',
-            subjectCode: subjectCode || ''
+            subjectCode: resolvedSubjectCode || ''
         }
     };
+};
+
+const buildFallbackAssignment = (body = {}, subjectLookup = new Map()) => {
+    const row = {
+        coursecode: String(body.courseCode || '').trim(),
+        subjectcode: String(body.subjectCode || '').trim()
+    };
+
+    return buildMaterialUpdateFromRow(row, subjectLookup);
 };
 
 // Configure Multer
@@ -684,7 +738,150 @@ router.post('/upload', protect, authorize('admin', 'teacher'), upload.single('fi
         });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ message: 'Server Error', error: error.message });
+        res.status(500).json({ message: 'Upload failed', error: error.message });
+    }
+});
+
+// @desc    Smart Upload - inline hierarchy creation + file upload in one step
+// @route   POST /api/pdfs/smart-upload
+// @access  Admin/Teacher
+router.post('/smart-upload', protect, authorize('admin', 'teacher'), (req, res, next) => {
+    bulkUpload.fields([
+        { name: 'files', maxCount: 20 }
+    ])(req, res, (error) => {
+        if (error) {
+            return res.status(400).json({ message: error.message || 'Upload failed' });
+        }
+        next();
+    });
+}, async (req, res) => {
+    try {
+        const uploadedFiles = req.files?.files || [];
+        const courseCode = normalizeCode(req.body.courseCode);
+        const semesterCode = normalizeCode(req.body.semesterCode);
+        const subjectCode = normalizeCode(req.body.subjectCode);
+        const {
+            courseName,
+            semesterName,
+            subjectName
+        } = req.body;
+
+        const created = { course: null, semester: null, subject: null };
+
+        // 1) Upsert Course if code provided
+        if (courseCode) {
+            const courseUpdate = { code: courseCode };
+            if (courseName) courseUpdate.name = courseName;
+
+            const course = await Course.findOneAndUpdate(
+                { code: courseCode },
+                {
+                    $set: courseUpdate,
+                    ...(!courseName ? { $setOnInsert: { name: courseCode } } : {})
+                },
+                { upsert: true, new: true }
+            );
+            created.course = { code: course.code, name: course.name, isNew: !course.updatedAt || course.createdAt.getTime() === course.updatedAt.getTime() };
+
+            // 2) Upsert Semester if code provided
+            if (semesterCode) {
+                const semUpdate = { code: semesterCode, course: course._id };
+                if (semesterName) semUpdate.name = semesterName;
+
+                const semester = await Semester.findOneAndUpdate(
+                    { code: semesterCode },
+                    {
+                        $set: semUpdate,
+                        ...(!semesterName ? { $setOnInsert: { name: semesterCode } } : {})
+                    },
+                    { upsert: true, new: true }
+                );
+                created.semester = { code: semester.code, name: semester.name };
+
+                // 3) Upsert Subject if code provided
+                if (subjectCode) {
+                    const subUpdate = { code: subjectCode, courseCode, semesterCode };
+                    if (subjectName) subUpdate.name = subjectName;
+
+                    const subject = await Subject.findOneAndUpdate(
+                        { code: subjectCode },
+                        {
+                            $set: subUpdate,
+                            ...(!subjectName ? { $setOnInsert: { name: subjectCode } } : {})
+                        },
+                        { upsert: true, new: true }
+                    );
+                    created.subject = { code: subject.code, name: subject.name };
+                }
+            }
+        }
+
+        // Resolve final assignment codes
+        const assignCourseCode = courseCode || '';
+        const assignSubjectCode = subjectCode || '';
+
+        const results = { successful: [], failed: [] };
+
+        for (const file of uploadedFiles) {
+            try {
+                const filePath = path.join(__dirname, '..', process.env.UPLOAD_PATH || 'uploads', file.filename);
+
+                let processedData = null;
+                if (file.mimetype === 'application/pdf') {
+                    try {
+                        processedData = await processUploadedPDF(filePath, {
+                            performOCRIfNeeded: true,
+                            ocrMaxPages: 3
+                        });
+                    } catch (processingError) {
+                        console.error(`Processing error for ${file.originalname}:`, processingError);
+                    }
+                }
+
+                const fileType = mimeToType[file.mimetype] || 'other';
+
+                const title = (processedData ? generateTitle(processedData, file.originalname) : file.originalname);
+
+                const pdf = await Pdf.create({
+                    title,
+                    filename: file.filename,
+                    originalName: file.originalname,
+                    size: file.size,
+                    type: fileType,
+                    uploadedBy: req.user._id,
+                    courseCode: assignCourseCode || undefined,
+                    subjectCode: assignSubjectCode || undefined,
+                    accessControl: { isProtected: false, allowDownload: true, viewOnly: false },
+                    metadata: processedData?.metadata || {},
+                    extractedText: processedData?.content?.text || '',
+                    ocrText: processedData?.ocr?.ocrText || '',
+                    isSearchable: processedData?.isSearchable || false,
+                    numPages: processedData?.content?.numPages || 0,
+                    processed: !!processedData
+                });
+
+                results.successful.push({
+                    originalName: file.originalname,
+                    title,
+                    pdfId: pdf._id,
+                    processed: !!processedData,
+                    courseCode: pdf.courseCode || '',
+                    subjectCode: pdf.subjectCode || ''
+                });
+            } catch (error) {
+                console.error(`Failed to process ${file.originalname}:`, error);
+                results.failed.push({ originalName: file.originalname, error: error.message });
+            }
+        }
+
+        res.status(201).json({
+            message: `Upload completed: ${results.successful.length} successful, ${results.failed.length} failed`,
+            results,
+            created
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Upload failed', error: error.message });
     }
 });
 
@@ -705,11 +902,13 @@ router.post('/bulk-upload', protect, authorize('admin', 'teacher'), (req, res, n
     try {
         const uploadedFiles = req.files?.files || [];
         const mappingFile = req.files?.mappingFile?.[0];
+        const hierarchySummaries = [];
+        const inlineRows = buildInlineHierarchyRows(req.body);
         let hierarchySummary = null;
         let subjectLookup = new Map();
 
-        if (uploadedFiles.length === 0) {
-            return res.status(400).json({ message: 'Please upload at least one file' });
+        if (uploadedFiles.length === 0 && !mappingFile && inlineRows.length === 0) {
+            return res.status(400).json({ message: 'Please upload at least one file or provide a hierarchy mapping' });
         }
 
         let mappingRows = [];
@@ -727,8 +926,7 @@ router.post('/bulk-upload', protect, authorize('admin', 'teacher'), (req, res, n
                 return res.status(400).json({ message: 'Mapping CSV is empty or invalid.' });
             }
 
-            hierarchySummary = await upsertHierarchyFromRows(mappingRows);
-            subjectLookup = await buildSubjectLookup(mappingRows);
+            hierarchySummaries.push(await upsertHierarchyFromRows(mappingRows));
 
             mappingRows.forEach((row, index) => {
                 const filename = getFilenameFromRow(row);
@@ -740,11 +938,25 @@ router.post('/bulk-upload', protect, authorize('admin', 'teacher'), (req, res, n
             });
         }
 
+        if (inlineRows.length > 0) {
+            hierarchySummaries.push(await upsertHierarchyFromRows(inlineRows));
+        }
+
+        const mergedHierarchySummary = mergeHierarchySummaries(...hierarchySummaries);
+        hierarchySummary = hasHierarchyActivity(mergedHierarchySummary) ? mergedHierarchySummary : null;
+
+        subjectLookup = await buildSubjectLookup(mappingRows, [
+            ...inlineRows.map((row) => getSubjectCodeFromRow(row)),
+            req.body.subjectCode
+        ]);
+        const fallbackAssignment = buildFallbackAssignment(req.body, subjectLookup);
+
         const results = {
             successful: [],
             failed: []
         };
         const matchedMappingKeys = new Set();
+        let matchedFileCount = 0;
 
         // Process each file
         for (const file of uploadedFiles) {
@@ -753,8 +965,12 @@ router.post('/bulk-upload', protect, authorize('admin', 'teacher'), (req, res, n
                 const mappingEntry = mappingIndex.get(buildFilenameKey(file.originalname));
                 const mappingRow = mappingEntry?.row;
                 const materialMapping = buildMaterialUpdateFromRow(mappingRow, subjectLookup);
-                const mappedUpdate = materialMapping.issues.length > 0 ? {} : materialMapping.update;
-                const mappedMetadata = mappedUpdate.metadata || {};
+                const mappedUpdate = materialMapping.update;
+                const finalUpdate = {
+                    ...fallbackAssignment.update,
+                    ...mappedUpdate
+                };
+                const mappedMetadata = finalUpdate.metadata || {};
 
                 if (materialMapping.issues.length > 0) {
                     mappingIssues.push({
@@ -778,21 +994,10 @@ router.post('/bulk-upload', protect, authorize('admin', 'teacher'), (req, res, n
                     }
                 }
 
-                // Infer file type
-                const mimeToType = {
-                    'application/pdf': 'pdf',
-                    'application/epub+zip': 'epub',
-                    'application/msword': 'doc',
-                    'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'doc',
-                    'image/jpeg': 'image',
-                    'image/png': 'image',
-                    'audio/mpeg': 'audio',
-                    'video/mp4': 'video'
-                };
                 const fileType = mimeToType[file.mimetype] || 'other'; // Default to 'other' if mimetype not recognized
 
                 // Auto-generate title if not provided
-                const title = mappedUpdate.title ||
+                const title = finalUpdate.title ||
                     req.body.title ||
                     (processedData ? generateTitle(processedData, file.originalname) : file.originalname);
 
@@ -805,10 +1010,10 @@ router.post('/bulk-upload', protect, authorize('admin', 'teacher'), (req, res, n
                     filename: file.filename,
                     originalName: file.originalname,
                     size: file.size,
-                    type: mappedUpdate.type || fileType,
+                    type: finalUpdate.type || fileType,
                     uploadedBy: req.user._id,
-                    courseCode: mappedUpdate.courseCode ?? req.body.courseCode,
-                    subjectCode: mappedUpdate.subjectCode ?? req.body.subjectCode,
+                    courseCode: finalUpdate.courseCode || undefined,
+                    subjectCode: finalUpdate.subjectCode || undefined,
                     accessControl: req.body.accessControl ? JSON.parse(req.body.accessControl) : undefined,
                     metadata: {
                         ...(processedData?.metadata || {}),
@@ -823,9 +1028,11 @@ router.post('/bulk-upload', protect, authorize('admin', 'teacher'), (req, res, n
                 });
 
                 const autoMapped = !!mappingRow && Object.keys(mappedUpdate).length > 0;
-                if (autoMapped) {
+                if (mappingRow) {
+                    matchedFileCount += 1;
                     matchedMappingKeys.add(buildFilenameKey(file.originalname));
                 }
+                const fallbackApplied = !autoMapped && Object.keys(fallbackAssignment.update).length > 0;
 
                 results.successful.push({
                     originalName: file.originalname,
@@ -833,10 +1040,12 @@ router.post('/bulk-upload', protect, authorize('admin', 'teacher'), (req, res, n
                     pdfId: pdf._id,
                     processed: !!processedData,
                     autoMapped,
+                    fallbackApplied,
                     mappingIssue: materialMapping.issues.length > 0
-                        ? `CSV mapping ignored: ${materialMapping.issues.join('; ')}`
+                        ? `CSV warning: ${materialMapping.issues.join('; ')}`
                         : '',
                     courseCode: pdf.courseCode || '',
+                    semesterCode: materialMapping.derived.semesterCode || fallbackAssignment.derived.semesterCode || '',
                     subjectCode: pdf.subjectCode || ''
                 });
             } catch (error) {
@@ -857,7 +1066,7 @@ router.post('/bulk-upload', protect, authorize('admin', 'teacher'), (req, res, n
             mappingSummary: mappingFile ? {
                 uniqueCsvRows: mappingIndex.size,
                 autoMappedFiles: autoMappedCount,
-                uploadsWithoutCsvMatch: uploadedFiles.length - autoMappedCount,
+                uploadsWithoutCsvMatch: uploadedFiles.length - matchedFileCount,
                 unusedCsvRows: Math.max(mappingIndex.size - matchedMappingKeys.size, 0),
                 invalidMappings: mappingIssues.length,
                 issues: mappingIssues.slice(0, 20)
@@ -865,7 +1074,7 @@ router.post('/bulk-upload', protect, authorize('admin', 'teacher'), (req, res, n
         });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ message: 'Server Error', error: error.message });
+        res.status(500).json({ message: 'Upload failed', error: error.message });
     }
 });
 
@@ -1018,8 +1227,8 @@ router.get('/:id/stream', protect, async (req, res) => {
 
 // @desc    Batch Delete PDFs
 // @route   DELETE /api/pdfs
-// @access  Admin
-router.delete('/', protect, authorize('admin'), async (req, res) => {
+// @access  Admin/Teacher
+router.delete('/', protect, authorize('admin', 'teacher'), async (req, res) => {
     try {
         const { ids } = req.body;
 
@@ -1060,8 +1269,8 @@ router.delete('/', protect, authorize('admin'), async (req, res) => {
 
 // @desc    Delete PDF
 // @route   DELETE /api/pdfs/:id
-// @access  Admin
-router.delete('/:id', protect, authorize('admin'), async (req, res) => {
+// @access  Admin/Teacher
+router.delete('/:id', protect, authorize('admin', 'teacher'), async (req, res) => {
     try {
         const pdf = await Pdf.findById(req.params.id);
 
@@ -1101,9 +1310,25 @@ router.put('/bulk-assign', protect, authorize('admin', 'teacher'), async (req, r
             return res.status(400).json({ message: 'No PDF IDs provided' });
         }
 
+        let resolvedCourseCode = courseCode !== undefined ? normalizeCode(courseCode) : courseCode;
+        let resolvedSubjectCode = subjectCode !== undefined ? normalizeCode(subjectCode) : subjectCode;
+
+        if (resolvedSubjectCode) {
+            const subject = await Subject.findOne({ code: resolvedSubjectCode })
+                .select('code courseCode')
+                .lean();
+
+            if (!subject) {
+                return res.status(400).json({ message: `Subject "${resolvedSubjectCode}" was not found` });
+            }
+
+            resolvedSubjectCode = subject.code;
+            resolvedCourseCode = subject.courseCode;
+        }
+
         const updateFields = {};
-        if (courseCode !== undefined) updateFields.courseCode = courseCode;
-        if (subjectCode !== undefined) updateFields.subjectCode = subjectCode;
+        if (courseCode !== undefined || subjectCode) updateFields.courseCode = resolvedCourseCode;
+        if (subjectCode !== undefined) updateFields.subjectCode = resolvedSubjectCode;
 
         if (Object.keys(updateFields).length === 0) {
             return res.status(400).json({ message: 'No assignment fields provided' });
@@ -1139,8 +1364,24 @@ router.put('/:id', protect, authorize('admin', 'teacher'), async (req, res) => {
         if (title) pdf.title = title;
         if (type) pdf.type = type;
         if (numPages !== undefined) pdf.numPages = numPages;
-        if (courseCode !== undefined) pdf.courseCode = courseCode;
-        if (subjectCode !== undefined) pdf.subjectCode = subjectCode;
+        const normalizedSubjectCode = subjectCode !== undefined ? normalizeCode(subjectCode) : subjectCode;
+        const normalizedCourseCode = courseCode !== undefined ? normalizeCode(courseCode) : courseCode;
+
+        if (normalizedSubjectCode) {
+            const subject = await Subject.findOne({ code: normalizedSubjectCode })
+                .select('code courseCode')
+                .lean();
+
+            if (!subject) {
+                return res.status(400).json({ message: `Subject "${normalizedSubjectCode}" was not found` });
+            }
+
+            pdf.subjectCode = subject.code;
+            pdf.courseCode = subject.courseCode;
+        } else {
+            if (courseCode !== undefined) pdf.courseCode = normalizedCourseCode;
+            if (subjectCode !== undefined) pdf.subjectCode = normalizedSubjectCode;
+        }
         if (accessControl) pdf.accessControl = accessControl;
         if (metadata) {
             pdf.metadata = {
@@ -1212,7 +1453,6 @@ router.post('/upload-csv', protect, authorize('admin', 'teacher'), (req, res, ne
                         filename,
                         reasons: materialMapping.issues
                     });
-                    return null;
                 }
 
                 if (Object.keys(update).length === 0) {

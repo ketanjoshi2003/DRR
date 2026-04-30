@@ -373,7 +373,6 @@ const DocViewer = () => {
     };
 
     const deleteNote = async (noteId) => {
-        if (!window.confirm('Delete this note?')) return;
         try {
             await api.delete(`/notes/${noteId}`);
             setNotes((prevNotes) => prevNotes.filter((n) => n._id !== noteId));

@@ -93,19 +93,12 @@ const AdminDashboard = ({ tab = 'upload' }) => {
     };
 
     const handleDeleteItem = async (id, type) => {
-        const confirmMsg = type === 'users'
-            ? 'Are you sure you want to delete this user? This action cannot be undone.'
-            : 'Are you sure? This will delete the file permanently.';
-
-        if (!window.confirm(confirmMsg)) return;
-
         try {
             const endpoint = type === 'users' ? `/auth/users/${id}` : `/pdfs/${id}`;
             await api.delete(endpoint);
             setManageData(prev => prev.filter(item => item._id !== id));
             // Refresh stats to keep counts accurate
             fetchStats();
-            alert(`${type === 'users' ? 'User' : 'PDF'} deleted successfully`);
         } catch (error) {
             console.error('Delete error:', error);
             alert('Delete failed');
@@ -113,17 +106,10 @@ const AdminDashboard = ({ tab = 'upload' }) => {
     };
 
     const handleResetAnalytics = async () => {
-        if (!window.confirm('Are you sure you want to PERMANENTLY delete all reading analytics, session history, and user notes? This cannot be undone.')) {
-            return;
-        }
-
         try {
-            const { data } = await api.delete('/analytics/reset');
+            await api.delete('/analytics/reset');
             // Refresh counts and lists
             fetchStats();
-            const deletedSessions = data?.deleted?.sessions ?? 0;
-            const deletedNotes = data?.deleted?.notes ?? 0;
-            alert(`Reset complete. Deleted ${deletedSessions} sessions and ${deletedNotes} notes.`);
         } catch (error) {
             console.error('Reset analytics error:', error);
             const message = error.response?.data?.message || error.message || 'Failed to reset analytics';
@@ -181,25 +167,6 @@ const AdminDashboard = ({ tab = 'upload' }) => {
 
             {tab === 'upload' && (
                 <div className="max-w-4xl">
-                    <div className="mb-4 rounded-xl border border-gray-200 dark:border-zinc-800 bg-gray-50/70 dark:bg-zinc-900/40 p-4">
-                        <p className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-zinc-500">Simple Upload Flow</p>
-                        <p className="text-sm text-gray-700 dark:text-zinc-300 mt-1">
-                            Use one screen for everything: select files, optionally add a Master CSV for filename mapping and hierarchy updates, then upload.
-                        </p>
-                        <p className="text-xs text-gray-500 dark:text-zinc-500 mt-2">
-                            Tip: use minimal template server/master-upload-minimal-template.csv (filename + subjectCode).
-                        </p>
-                    </div>
-
-                    <div className="mb-6 rounded-xl border border-brand-100 dark:border-brand-900/20 bg-brand-50/50 dark:bg-brand-900/10 p-4">
-                        <p className="text-xs font-bold uppercase tracking-wider text-brand-700 dark:text-brand-300">3 Steps</p>
-                        <ol className="mt-2 text-sm text-brand-800 dark:text-brand-200 space-y-1 list-decimal pl-5">
-                            <li>Select all document files (PDF, DOC, image, audio, video).</li>
-                            <li>Optional: add one Master CSV with filename column.</li>
-                            <li>Click upload and review auto-mapped results.</li>
-                        </ol>
-                    </div>
-
                     <BulkUpload />
                 </div>
             )}

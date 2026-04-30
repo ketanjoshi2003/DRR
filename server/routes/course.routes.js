@@ -1,6 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const Course = require('../models/Course');
+const Semester = require('../models/Semester');
+const Subject = require('../models/Subject');
+const Pdf = require('../models/Pdf');
 const { protect } = require('../middleware/auth.middleware');
 const multer = require('multer');
 const csv = require('csv-parser');
@@ -23,7 +26,7 @@ router.get('/', async (req, res) => {
 router.post('/', protect, async (req, res) => {
     const { name, code, description } = req.body;
 
-    if (req.user.role !== 'admin') {
+    if (req.user.role !== 'admin' && req.user.role !== 'teacher') {
         return res.status(403).json({ message: 'Access denied' });
     }
 
@@ -42,7 +45,7 @@ router.post('/', protect, async (req, res) => {
 
 // Upload CSV to import courses
 router.post('/upload', protect, upload.single('file'), async (req, res) => {
-    if (req.user.role !== 'admin') {
+    if (req.user.role !== 'admin' && req.user.role !== 'teacher') {
         return res.status(403).json({ message: 'Access denied' });
     }
 
@@ -86,12 +89,53 @@ router.post('/upload', protect, upload.single('file'), async (req, res) => {
                 const bulkOps = results.map(course => ({
                     updateOne: {
                         filter: { code: course.code },
-                        update: { $set: course },
+                        update: { $set: {
+                            name: course.name,
+                            code: course.code,
+                            description: course.description
+                        } },
                         upsert: true
                     }
                 }));
 
                 const result = await Course.bulkWrite(bulkOps);
+
+                // Auto-generate semesters if semestercount is provided
+                const coursesWithSemesters = results.filter(c => c.semestercount || c.semesterCount);
+                if (coursesWithSemesters.length > 0) {
+                    const courseCodes = coursesWithSemesters.map(c => c.code);
+                    const dbCourses = await Course.find({ code: { $in: courseCodes } });
+                    
+                    const semesterOps = [];
+                    for (const courseData of coursesWithSemesters) {
+                        const dbCourse = dbCourses.find(c => c.code === courseData.code);
+                        if (!dbCourse) continue;
+                        
+                        const count = parseInt(courseData.semestercount || courseData.semesterCount, 10);
+                        if (!isNaN(count) && count > 0) {
+                            for (let i = 1; i <= count; i++) {
+                                const semCode = `${dbCourse.code}-SEM${i}`;
+                                semesterOps.push({
+                                    updateOne: {
+                                        filter: { code: semCode },
+                                        update: { 
+                                            $set: {
+                                                name: `Semester ${i}`,
+                                                code: semCode,
+                                                course: dbCourse._id
+                                            }
+                                        },
+                                        upsert: true
+                                    }
+                                });
+                            }
+                        }
+                    }
+                    if (semesterOps.length > 0) {
+                        await Semester.bulkWrite(semesterOps);
+                    }
+                }
+
                 res.json({
                     message: 'CSV processing completed',
                     inserted: result.upsertedCount,
@@ -109,23 +153,47 @@ router.post('/upload', protect, upload.single('file'), async (req, res) => {
         });
 });
 
-// Delete all courses
-// Delete courses (all or specific list)
+// Delete courses (all or specific list) with cascade
 router.delete('/', protect, async (req, res) => {
-    if (req.user.role !== 'admin') {
+    if (req.user.role !== 'admin' && req.user.role !== 'teacher') {
         return res.status(403).json({ message: 'Access denied' });
     }
 
     try {
         const { ids } = req.body;
-        let result;
+        let coursesToDelete;
+
         if (ids && Array.isArray(ids) && ids.length > 0) {
-            result = await Course.deleteMany({ _id: { $in: ids } });
-            res.json({ message: `Deleted ${result.deletedCount} courses` });
+            coursesToDelete = await Course.find({ _id: { $in: ids } }).lean();
         } else {
-            result = await Course.deleteMany({});
-            res.json({ message: `Deleted all courses. Count: ${result.deletedCount}` });
+            coursesToDelete = await Course.find({}).lean();
         }
+
+        if (coursesToDelete.length === 0) {
+            return res.json({ message: 'No courses found to delete' });
+        }
+
+        const courseIds = coursesToDelete.map(c => c._id);
+        const courseCodes = coursesToDelete.map(c => c.code);
+
+        // Cascade: delete semesters belonging to these courses
+        const semResult = await Semester.deleteMany({ course: { $in: courseIds } });
+
+        // Cascade: delete subjects belonging to these courses
+        const subResult = await Subject.deleteMany({ courseCode: { $in: courseCodes } });
+
+        // Unlink PDFs that reference these courses
+        await Pdf.updateMany(
+            { courseCode: { $in: courseCodes } },
+            { $unset: { courseCode: '', subjectCode: '' } }
+        );
+
+        // Delete the courses themselves
+        const result = await Course.deleteMany({ _id: { $in: courseIds } });
+
+        res.json({
+            message: `Deleted ${result.deletedCount} course(s), ${semResult.deletedCount} semester(s), ${subResult.deletedCount} subject(s)`
+        });
     } catch (err) {
         res.status(500).json({ message: err.message });
     }

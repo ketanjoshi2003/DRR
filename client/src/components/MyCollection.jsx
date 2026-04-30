@@ -175,9 +175,11 @@ const MyCollection = () => {
                                     </button>
                                 </div>
                                 <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2 relative z-10">{subject.name}</h3>
-                                <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2 mb-4 relative z-10">
-                                    {subject.description || 'No description available for this subject.'}
-                                </p>
+                                {subject.description && (
+                                    <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2 mb-4 relative z-10">
+                                        {subject.description}
+                                    </p>
+                                )}
                                 <Link
                                     to={`/subjects?search=${subject.code}`}
                                     className="text-sm font-bold text-brand-600 dark:text-brand-400 flex items-center gap-1 hover:gap-2 transition-all"
@@ -207,9 +209,11 @@ const MyCollection = () => {
                                         </button>
                                     </div>
                                     <p className="text-xs font-mono text-gray-500 mb-3">{course.code}</p>
-                                    <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2 mb-4">
-                                        {course.description || 'Access all subjects and materials for this course program.'}
-                                    </p>
+                                    {course.description && (
+                                        <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2 mb-4">
+                                            {course.description}
+                                        </p>
+                                    )}
                                     <Link
                                         to={`/courses`}
                                         className="inline-flex items-center gap-2 px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white text-sm font-bold rounded-lg transition-all"

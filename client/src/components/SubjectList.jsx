@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Book, Plus, Upload, Trash2, Filter, Search, Bookmark, ChevronDown, FileText, X, CheckCircle, Unlink } from 'lucide-react';
 import CustomSelect from './CustomSelect';
@@ -16,8 +16,6 @@ const SubjectList = () => {
     const [showAddModal, setShowAddModal] = useState(false);
     const [newSubject, setNewSubject] = useState({ name: '', code: '', description: '', courseId: '', semesterId: '' });
     const { user } = useAuth();
-    const fileInputRef = useRef(null);
-    const [uploading, setUploading] = useState(false);
     const [isDeleteMode, setIsDeleteMode] = useState(false);
     const [selectedIds, setSelectedIds] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');
@@ -120,13 +118,8 @@ const SubjectList = () => {
     const handleDeleteSelected = async () => {
         if (selectedIds.length === 0) return;
 
-        if (!window.confirm(`Are you sure you want to delete ${selectedIds.length} subjects? This action cannot be undone.`)) {
-            return;
-        }
-
         try {
             await api.delete('/subjects', { data: { ids: selectedIds } });
-            alert('Selected subjects deleted successfully.');
             setSelectedIds([]);
             setIsDeleteMode(false);
             fetchData();
@@ -147,34 +140,6 @@ const SubjectList = () => {
             setSelectedIds([]);
         } else {
             setSelectedIds(filteredSubjects.map(s => s._id));
-        }
-    };
-
-    const handleFileUpload = async (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-
-        const formData = new FormData();
-        formData.append('file', file);
-
-        setUploading(true);
-        try {
-            const { data } = await api.post('/subjects/upload', formData, {
-                headers: {
-                    'Content-Type': 'multipart/form-data',
-                },
-            });
-            alert(`Subjects processed: ${data.message || 'Success'}`);
-            fetchData();
-        } catch (error) {
-            console.error('Error uploading CSV:', error);
-            const msg = error.response?.data?.message || error.message;
-            alert(`Failed to upload subjects: ${msg}`);
-        } finally {
-            setUploading(false);
-            if (fileInputRef.current) {
-                fileInputRef.current.value = '';
-            }
         }
     };
 
@@ -213,7 +178,6 @@ const SubjectList = () => {
             });
             setSuccessMsg(`${selectedMaterialIds.length} material(s) unassigned successfully!`);
             setTimeout(() => setSuccessMsg(''), 3000);
-            const removedIds = [...selectedMaterialIds];
             setSelectedMaterialIds([]);
             // Refresh PDFs list
             const { data: freshPdfs } = await api.get('/pdfs');
@@ -369,22 +333,14 @@ const SubjectList = () => {
 
                         {(user?.role === 'admin' || user?.role === 'teacher') && (
                             <div className="flex flex-wrap gap-2 items-center w-full md:w-auto">
-                                <input
-                                    type="file"
-                                    accept=".csv"
-                                    ref={fileInputRef}
-                                    onChange={handleFileUpload}
-                                    className="hidden"
-                                />
                                 {!isDeleteMode ? (
                                     <>
                                         <button
-                                            onClick={() => fileInputRef.current?.click()}
-                                            disabled={uploading}
+                                            onClick={() => navigate('/upload')}
                                             className="hidden md:flex items-center gap-2 px-3.5 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-all text-sm font-semibold shadow-lg shadow-green-500/10 disabled:opacity-50"
                                         >
                                             <Upload className="w-4 h-4" />
-                                            {uploading ? 'Processing...' : 'Upload CSV'}
+                                            Smart Upload
                                         </button>
                                         <button
                                             onClick={() => setShowAddModal(true)}
@@ -499,9 +455,11 @@ const SubjectList = () => {
                                                     </div>
                                                 </div>
                                                 <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-1">{subject.name}</h3>
-                                                <p className="text-gray-600 dark:text-gray-400 text-sm line-clamp-3">
-                                                    {subject.description || 'No description available.'}
-                                                </p>
+                                                {subject.description && (
+                                                    <p className="text-gray-600 dark:text-gray-400 text-sm line-clamp-3">
+                                                        {subject.description}
+                                                    </p>
+                                                )}
 
                                                 {/* Materials count + expand button */}
                                                 <div className="mt-3 flex items-center justify-between">

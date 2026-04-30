@@ -129,13 +129,8 @@ const PDFList = () => {
     const handleDeleteSelected = async () => {
         if (selectedIds.length === 0) return;
 
-        if (!window.confirm(`Are you sure you want to delete ${selectedIds.length} PDFs? This action cannot be undone.`)) {
-            return;
-        }
-
         try {
             await api.delete('/pdfs', { data: { ids: selectedIds } });
-            alert('Selected PDFs deleted successfully.');
             setSelectedIds([]);
             setIsDeleteMode(false);
             fetchPdfs();

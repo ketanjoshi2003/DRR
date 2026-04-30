@@ -18,8 +18,8 @@ const IMPORT_TYPES = [
         label: 'Courses',
         icon: GraduationCap,
         endpoint: '/courses/upload',
-        headers: ['name', 'code', 'description'],
-        description: 'Define top-level course codes before semesters and subjects.'
+        headers: ['name', 'code', 'description', 'semesterCount'],
+        description: 'Define top-level course codes. Tip: Add semesterCount column to auto-generate semesters.'
     },
     {
         value: 'semesters',
