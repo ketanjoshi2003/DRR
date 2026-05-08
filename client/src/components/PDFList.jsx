@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import api from '../api/axios';
-import { FileText, Clock, Trash2, Search, Download, Bookmark, Image as ImageIcon, Film, FileAudio, File, X, GraduationCap, Book, Tag, CheckCircle } from 'lucide-react';
+import { FileText, Clock, Trash2, Search, Download, Bookmark, Image as ImageIcon, Film, FileAudio, File, X, GraduationCap, Book, Tag, CheckCircle, Calendar } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import CustomSelect from './CustomSelect';
 
@@ -62,8 +62,10 @@ const PDFList = () => {
 
     // Assignment state
     const [courses, setCourses] = useState([]);
+    const [semesters, setSemesters] = useState([]);
     const [subjects, setSubjects] = useState([]);
     const [assignCourseCode, setAssignCourseCode] = useState('');
+    const [assignSemesterCode, setAssignSemesterCode] = useState('');
     const [assignSubjectCode, setAssignSubjectCode] = useState('');
     const [assigning, setAssigning] = useState(false);
     const [assignSuccess, setAssignSuccess] = useState('');
@@ -90,11 +92,13 @@ const PDFList = () => {
 
     const fetchAssignmentOptions = async () => {
         try {
-            const [coursesRes, subjectsRes] = await Promise.all([
+            const [coursesRes, semestersRes, subjectsRes] = await Promise.all([
                 api.get('/courses'),
+                api.get('/semesters'),
                 api.get('/subjects')
             ]);
             setCourses(coursesRes.data);
+            setSemesters(Array.isArray(semestersRes.data) ? semestersRes.data : []);
             setSubjects(subjectsRes.data);
         } catch (err) {
             console.error('Failed to fetch assignment options', err);
@@ -159,6 +163,7 @@ const PDFList = () => {
             setSelectedIds([]);
             setIsAssignMode(false);
             setAssignCourseCode('');
+            setAssignSemesterCode('');
             setAssignSubjectCode('');
             fetchPdfs();
         } catch (error) {
@@ -307,6 +312,7 @@ const PDFList = () => {
                                             setIsAssignMode(false);
                                             setSelectedIds([]);
                                             setAssignCourseCode('');
+                                            setAssignSemesterCode('');
                                             setAssignSubjectCode('');
                                         }}
                                         className="px-4 py-2.5 bg-white dark:bg-zinc-950 border border-gray-200 dark:border-zinc-800 text-gray-600 dark:text-gray-400 rounded-xl hover:bg-gray-50 text-sm font-bold transition-all"
@@ -327,18 +333,31 @@ const PDFList = () => {
                                 <Tag className="w-4 h-4 text-brand-600 dark:text-brand-400" />
                             </div>
                             <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100">Mass Assignment</h3>
-                            <span className="text-xs text-gray-400 dark:text-gray-500 ml-1">— Select materials below, then choose course & subject</span>
+                            <span className="text-xs text-gray-400 dark:text-gray-500 ml-1">— Select materials below, then choose course, semester & subject</span>
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
                             <div className="space-y-1.5">
                                 <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider ml-1">Assign Course</label>
                                 <CustomSelect
-                                    options={[{ value: '', label: 'No Course Assigned' }, ...courses.map(c => ({ value: c.code, label: `${c.name} (${c.code})` }))]}
+                                    options={[{ value: '', label: 'All Courses' }, ...courses.map(c => ({ value: c.code, label: `${c.name} (${c.code})` }))]}
                                     value={assignCourseCode}
-                                    onChange={(val) => { setAssignCourseCode(val); setAssignSubjectCode(''); }}
+                                    onChange={(val) => { setAssignCourseCode(val); setAssignSemesterCode(''); setAssignSubjectCode(''); }}
                                     icon={GraduationCap}
                                     placeholder="Select Course..."
+                                />
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider ml-1">Assign Semester</label>
+                                <CustomSelect
+                                    options={[{ value: '', label: 'All Semesters' }, ...semesters
+                                        .filter(s => !assignCourseCode || s.course?.code === assignCourseCode)
+                                        .map(s => ({ value: s.code, label: `${s.name} (${s.code})` }))
+                                    ]}
+                                    value={assignSemesterCode}
+                                    onChange={(val) => { setAssignSemesterCode(val); setAssignSubjectCode(''); }}
+                                    icon={Calendar}
+                                    placeholder="Select Semester..."
                                 />
                             </div>
                             <div className="space-y-1.5">
@@ -346,6 +365,7 @@ const PDFList = () => {
                                 <CustomSelect
                                     options={[{ value: '', label: 'No Subject Assigned' }, ...subjects
                                         .filter(s => !assignCourseCode || s.courseCode === assignCourseCode)
+                                        .filter(s => !assignSemesterCode || s.semesterCode === assignSemesterCode)
                                         .map(s => ({ value: s.code, label: `${s.name} (${s.code})` }))
                                     ]}
                                     value={assignSubjectCode}

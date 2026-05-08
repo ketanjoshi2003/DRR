@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import api from '../api/axios';
-import { Upload, X, CheckCircle, AlertCircle, FileText, Loader, GraduationCap, Book, Plus } from 'lucide-react';
+import { Upload, X, CheckCircle, AlertCircle, FileText, Loader, GraduationCap, Book, Plus, Calendar } from 'lucide-react';
 import CustomSelect from './CustomSelect';
 
 const DOCUMENT_MIME_TYPES = [
@@ -127,8 +127,10 @@ const BulkUpload = () => {
     const [uploadResults, setUploadResults] = useState(null);
     const [dragActive, setDragActive] = useState(false);
     const [courses, setCourses] = useState([]);
+    const [semesters, setSemesters] = useState([]);
     const [subjects, setSubjects] = useState([]);
     const [selectedCourse, setSelectedCourse] = useState('');
+    const [selectedSemester, setSelectedSemester] = useState('');
     const [selectedSubject, setSelectedSubject] = useState('');
     const [assignmentMode, setAssignmentMode] = useState('existing');
     const [newPath, setNewPath] = useState({
@@ -146,11 +148,13 @@ const BulkUpload = () => {
     useEffect(() => {
         const fetchOptions = async () => {
             try {
-                const [coursesRes, subjectsRes] = await Promise.all([
+                const [coursesRes, semestersRes, subjectsRes] = await Promise.all([
                     api.get('/courses'),
+                    api.get('/semesters'),
                     api.get('/subjects')
                 ]);
                 setCourses(coursesRes.data);
+                setSemesters(Array.isArray(semestersRes.data) ? semestersRes.data : []);
                 setSubjects(subjectsRes.data);
             } catch (err) {
                 console.error('Failed to fetch assignment options', err);
@@ -378,8 +382,11 @@ const BulkUpload = () => {
 
         const uniqueCsvKeys = Array.from(new Set(
             mappingRows
-                .map((row) => normalizeFilename(pickCsvValue(row, FILENAME_HEADERS)))
-                .filter(Boolean)
+                .flatMap((row) => {
+                    const raw = pickCsvValue(row, FILENAME_HEADERS);
+                    if (!raw) return [];
+                    return raw.split('|').map((f) => normalizeFilename(f)).filter(Boolean);
+                })
         ));
 
         const csvKeySet = new Set(uniqueCsvKeys);
@@ -527,14 +534,15 @@ const BulkUpload = () => {
                 </div>
 
                 {assignmentMode === 'existing' ? (
-                    <div className="mt-5 grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="mt-5 grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div className="space-y-2">
                             <label className="text-xs font-bold text-gray-500 dark:text-zinc-400 uppercase tracking-widest ml-1">Course</label>
                             <CustomSelect
-                                options={[{ value: '', label: 'No Course Assigned' }, ...courses.map((course) => ({ value: course.code, label: `${course.name} - ${course.code}` }))]}
+                                options={[{ value: '', label: 'All Courses' }, ...courses.map((course) => ({ value: course.code, label: `${course.name} - ${course.code}` }))]}
                                 value={selectedCourse}
                                 onChange={(val) => {
                                     setSelectedCourse(val);
+                                    setSelectedSemester('');
                                     setSelectedSubject('');
                                 }}
                                 icon={GraduationCap}
@@ -542,10 +550,27 @@ const BulkUpload = () => {
                             />
                         </div>
                         <div className="space-y-2">
+                            <label className="text-xs font-bold text-gray-500 dark:text-zinc-400 uppercase tracking-widest ml-1">Semester</label>
+                            <CustomSelect
+                                options={[{ value: '', label: 'All Semesters' }, ...semesters
+                                    .filter((s) => !selectedCourse || s.course?.code === selectedCourse)
+                                    .map((s) => ({ value: s.code, label: `${s.name} (${s.code})` }))
+                                ]}
+                                value={selectedSemester}
+                                onChange={(val) => {
+                                    setSelectedSemester(val);
+                                    setSelectedSubject('');
+                                }}
+                                icon={Calendar}
+                                placeholder="Search or Select Semester"
+                            />
+                        </div>
+                        <div className="space-y-2">
                             <label className="text-xs font-bold text-gray-500 dark:text-zinc-400 uppercase tracking-widest ml-1">Subject</label>
                             <CustomSelect
                                 options={[{ value: '', label: 'No Subject Assigned' }, ...subjects
                                     .filter((subject) => !selectedCourse || subject.courseCode === selectedCourse)
+                                    .filter((subject) => !selectedSemester || subject.semesterCode === selectedSemester)
                                     .map((subject) => ({ value: subject.code, label: `${subject.name} - ${subject.code}` }))
                                 ]}
                                 value={selectedSubject}
@@ -554,6 +579,9 @@ const BulkUpload = () => {
                                     const subject = subjects.find((item) => item.code === val);
                                     if (subject?.courseCode) {
                                         setSelectedCourse(subject.courseCode);
+                                    }
+                                    if (subject?.semesterCode) {
+                                        setSelectedSemester(subject.semesterCode);
                                     }
                                 }}
                                 icon={Book}

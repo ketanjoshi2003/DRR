@@ -8,6 +8,9 @@ const { protect } = require('../middleware/auth.middleware');
 const multer = require('multer');
 const csv = require('csv-parser');
 const fs = require('fs');
+const path = require('path');
+const Session = require('../models/Session');
+const Note = require('../models/Note');
 
 // Configure Multer for temporary storage
 const upload = multer({ dest: 'uploads/' });
@@ -182,17 +185,38 @@ router.delete('/', protect, async (req, res) => {
         // Cascade: delete subjects belonging to these courses
         const subResult = await Subject.deleteMany({ courseCode: { $in: courseCodes } });
 
-        // Unlink PDFs that reference these courses
-        await Pdf.updateMany(
-            { courseCode: { $in: courseCodes } },
-            { $unset: { courseCode: '', subjectCode: '' } }
-        );
+        // Cascade: delete materials (PDFs) and their related data
+        const pdfsToDelete = await Pdf.find({ courseCode: { $in: courseCodes } });
+        if (pdfsToDelete.length > 0) {
+            const pdfIds = pdfsToDelete.map(pdf => pdf._id);
+            
+            // Delete actual files from filesystem
+            pdfsToDelete.forEach(pdf => {
+                if (pdf.filename) {
+                    const filePath = path.join(__dirname, '..', process.env.UPLOAD_PATH || 'uploads', pdf.filename);
+                    if (fs.existsSync(filePath)) {
+                        try {
+                            fs.unlinkSync(filePath);
+                        } catch (err) {
+                            console.error(`Failed to delete file during course cascade: ${filePath}`, err);
+                        }
+                    }
+                }
+            });
+
+            // Delete DB records
+            await Promise.all([
+                Pdf.deleteMany({ _id: { $in: pdfIds } }),
+                Session.deleteMany({ pdfId: { $in: pdfIds } }),
+                Note.deleteMany({ pdf: { $in: pdfIds } })
+            ]);
+        }
 
         // Delete the courses themselves
         const result = await Course.deleteMany({ _id: { $in: courseIds } });
 
         res.json({
-            message: `Deleted ${result.deletedCount} course(s), ${semResult.deletedCount} semester(s), ${subResult.deletedCount} subject(s)`
+            message: `Deleted ${result.deletedCount} course(s), ${semResult.deletedCount} semester(s), ${subResult.deletedCount} subject(s), and ${pdfsToDelete.length} material(s)`
         });
     } catch (err) {
         res.status(500).json({ message: err.message });

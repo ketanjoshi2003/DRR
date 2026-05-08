@@ -65,6 +65,11 @@ const getSubjectCodeFromRow = (row) => normalizeCode(pickRowValue(row, ['subject
 const getSubjectNameFromRow = (row) => pickRowValue(row, ['subjectname', 'subject_name', 'subject']);
 
 const getFilenameFromRow = (row) => pickRowValue(row, ['filename', 'file', 'originalname', 'original_name']);
+const getFilenamesFromRow = (row) => {
+    const raw = getFilenameFromRow(row);
+    if (!raw) return [];
+    return raw.split('|').map(f => f.trim()).filter(Boolean);
+};
 const getTypeFromRow = (row) => pickRowValue(row, ['type', 'materialtype', 'material_type']);
 const getTitleFromRow = (row) => pickRowValue(row, ['title', 'materialtitle', 'material_title']);
 
@@ -929,11 +934,13 @@ router.post('/bulk-upload', protect, authorize('admin', 'teacher'), (req, res, n
             hierarchySummaries.push(await upsertHierarchyFromRows(mappingRows));
 
             mappingRows.forEach((row, index) => {
-                const filename = getFilenameFromRow(row);
-                if (!filename) return;
-                mappingIndex.set(buildFilenameKey(filename), {
-                    row,
-                    rowNumber: index + 2
+                const filenames = getFilenamesFromRow(row);
+                if (filenames.length === 0) return;
+                filenames.forEach((filename) => {
+                    mappingIndex.set(buildFilenameKey(filename), {
+                        row,
+                        rowNumber: index + 2
+                    });
                 });
             });
         }
@@ -1426,12 +1433,15 @@ router.post('/upload-csv', protect, authorize('admin', 'teacher'), (req, res, ne
         const mappingIssues = [];
 
         const results = parsedRows
-            .map((row, index) => ({
-                row,
-                rowNumber: index + 2,
-                filename: getFilenameFromRow(row)
-            }))
-            .filter((entry) => entry.filename);
+            .flatMap((row, index) => {
+                const filenames = getFilenamesFromRow(row);
+                if (filenames.length === 0) return [];
+                return filenames.map((filename) => ({
+                    row,
+                    rowNumber: index + 2,
+                    filename
+                }));
+            });
 
         if (results.length === 0) {
             return res.json({
