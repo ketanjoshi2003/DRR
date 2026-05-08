@@ -32,6 +32,7 @@ app.use('/api/notes', require('./routes/note.routes'));
 app.use('/api/analytics', require('./routes/analytics.routes'));
 app.use('/api/reports', require('./routes/report.routes'));
 app.use('/api/emails', require('./routes/email.routes'));
+app.use('/api/collection', require('./routes/collection.routes'));
 app.get('/', (req, res) => {
     res.send('Digital Reading Room API is running');
 });

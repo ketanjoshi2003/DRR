@@ -1,13 +1,42 @@
 coursecode,coursename,coursedescription,semestercode,semestername,subjectcode,subjectname
-MCA,Master of Computer Applications,Post Graduate Degree in Computer Applications,SEM1,Semester 1,MCA101,Programming in C
-MCA,Master of Computer Applications,Post Graduate Degree in Computer Applications,SEM1,Semester 1,MCA102,Database Management Systems
-MCA,Master of Computer Applications,Post Graduate Degree in Computer Applications,SEM1,Semester 1,MCA103,Computer Organization and Architecture
-MCA,Master of Computer Applications,Post Graduate Degree in Computer Applications,SEM2,Semester 2,MCA201,Object Oriented Programming with C++
-MCA,Master of Computer Applications,Post Graduate Degree in Computer Applications,SEM2,Semester 2,MCA202,Data Structures
-MCA,Master of Computer Applications,Post Graduate Degree in Computer Applications,SEM2,Semester 2,MCA203,Operating Systems
-MCA,Master of Computer Applications,Post Graduate Degree in Computer Applications,SEM3,Semester 3,MCA301,Java Programming
-MCA,Master of Computer Applications,Post Graduate Degree in Computer Applications,SEM3,Semester 3,MCA302,Software Engineering
-MCA,Master of Computer Applications,Post Graduate Degree in Computer Applications,SEM3,Semester 3,MCA303,Computer Networks
-MCA,Master of Computer Applications,Post Graduate Degree in Computer Applications,SEM4,Semester 4,MCA401,Web Technologies
-MCA,Master of Computer Applications,Post Graduate Degree in Computer Applications,SEM4,Semester 4,MCA402,Artificial Intelligence
-MCA,Master of Computer Applications,Post Graduate Degree in Computer Applications,SEM4,Semester 4,MCA403,Major Project
+MCA,Master of Computer Applications,Post Graduate Degree in Computer Applications,SEM1,Semester 1,P11A1JP,JAVA PROGRAMMING- 2024
+MCA,Master of Computer Applications,Post Graduate Degree in Computer Applications,SEM1,Semester 1,P11A2PP,PYTHON PROGRAMMING- 2024
+MCA,Master of Computer Applications,Post Graduate Degree in Computer Applications,SEM1,Semester 1,P11A3DMS,DATABASE MANAGEMENT SYSTEM- 2024
+MCA,Master of Computer Applications,Post Graduate Degree in Computer Applications,SEM1,Semester 1,P11A4FM,FOUNDATIONS OF MATHEMATICS- 2024
+MCA,Master of Computer Applications,Post Graduate Degree in Computer Applications,SEM1,Semester 1,P11A5LFN,LINUX FUNDAMENTAL WITH NETWORKING - 2024
+MCA,Master of Computer Applications,Post Graduate Degree in Computer Applications,SEM1,Semester 1,P11A6ADP,ALGORITHMS AND LOGIC DEVELOPMENT
+MCA,Master of Computer Applications,Post Graduate Degree in Computer Applications,SEM1,Semester 1,P11A7WDD,WEB DESIGNING AND DATABASE
+MCA,Master of Computer Applications,Post Graduate Degree in Computer Applications,SEM1,Semester 1,P11A8CFN,COMPUTER FUNDAMENTALS AND NETWORKING
+MCA,Master of Computer Applications,Post Graduate Degree in Computer Applications,SEM2,Semester 2,P12A1FMA,FUNDAMENTAL OF MOBILE APPLICATION - 2024
+MCA,Master of Computer Applications,Post Graduate Degree in Computer Applications,SEM2,Semester 2,P12A2WTD,WEB TECHNOLOGY USING .NET - 2024
+MCA,Master of Computer Applications,Post Graduate Degree in Computer Applications,SEM2,Semester 2,P12A3SE,SOFTWARE ENGINEERING - 2024
+MCA,Master of Computer Applications,Post Graduate Degree in Computer Applications,SEM2,Semester 2,P12A4IOT,BASICS OF IOT AND AUTOMATION - 2024
+MCA,Master of Computer Applications,Post Graduate Degree in Computer Applications,SEM2,Semester 2,P12A4FST,FUNDAMENTAL OF SOFTWARE TESTING - 2024
+MCA,Master of Computer Applications,Post Graduate Degree in Computer Applications,SEM2,Semester 2,P12A4CS1,CYBER SECURITY-I - 2024
+MCA,Master of Computer Applications,Post Graduate Degree in Computer Applications,SEM2,Semester 2,P12A4DS1,DATA SCIENCE-I - 2024
+MCA,Master of Computer Applications,Post Graduate Degree in Computer Applications,SEM2,Semester 2,P12A4BD1,BIG DATA ANALYTICS-I - 2024
+MCA,Master of Computer Applications,Post Graduate Degree in Computer Applications,SEM2,Semester 2,P12A4CC1,CLOUD COMPUTING-I - 2024
+MCA,Master of Computer Applications,Post Graduate Degree in Computer Applications,SEM2,Semester 2,P12A4ML1,MACHINE LEARNING-I - 2024
+MCA,Master of Computer Applications,Post Graduate Degree in Computer Applications,SEM2,Semester 2,P12A5STA,SOFTWARE TESTING AUTOMATION - 2024
+MCA,Master of Computer Applications,Post Graduate Degree in Computer Applications,SEM2,Semester 2,P12A5AGL,AGILE METHODOLOGY - 2024
+MCA,Master of Computer Applications,Post Graduate Degree in Computer Applications,SEM2,Semester 2,P12A5AIR,ARTIFICIAL INTELLIGENCE AND ROBOTICS - 2024
+MCA,Master of Computer Applications,Post Graduate Degree in Computer Applications,SEM2,Semester 2,P12A5BC1,BLOCKCHAIN TECHNOLOGY-I - 2024
+MCA,Master of Computer Applications,Post Graduate Degree in Computer Applications,SEM3,Semester 3,P13A1ADM,ADVANCED DATABASE MANAGEMENT SYSTEM - 2024
+MCA,Master of Computer Applications,Post Graduate Degree in Computer Applications,SEM3,Semester 3,P13A2WTD,WEB TECHNOLOGIES DEVELOPMENT USING PHP - 2024
+MCA,Master of Computer Applications,Post Graduate Degree in Computer Applications,SEM3,Semester 3,P13A3DOP,DEVOPS - 2024
+MCA,Master of Computer Applications,Post Graduate Degree in Computer Applications,SEM3,Semester 3,P13A4TAR,TESTING AND AUTOMATION REST API - 2024
+MCA,Master of Computer Applications,Post Graduate Degree in Computer Applications,SEM3,Semester 3,P13A4WTD,WEB TECHNOLOGIES DEVELOPMENT USING SPRING - 2024
+MCA,Master of Computer Applications,Post Graduate Degree in Computer Applications,SEM3,Semester 3,P13A4IOS,IOS APPLICATION DEVELOPMENT - 2024
+MCA,Master of Computer Applications,Post Graduate Degree in Computer Applications,SEM3,Semester 3,P13A4DAA,DESIGN AND ANALYSIS OF ALGORITHMS - 2024
+MCA,Master of Computer Applications,Post Graduate Degree in Computer Applications,SEM3,Semester 3,P13A4ENT,ENTREPRENEURSHIP - 2024
+MCA,Master of Computer Applications,Post Graduate Degree in Computer Applications,SEM3,Semester 3,P13A4HVE,HUMAN VALUES AND PROFESSIONAL ETHICS - 2024
+MCA,Master of Computer Applications,Post Graduate Degree in Computer Applications,SEM3,Semester 3,P13A5MTA,MOBILE TESTING & AUTOMATION - 2024
+MCA,Master of Computer Applications,Post Graduate Degree in Computer Applications,SEM3,Semester 3,P13A5ITA,IOT ADVANCED - 2024
+MCA,Master of Computer Applications,Post Graduate Degree in Computer Applications,SEM3,Semester 3,P13A5ISA,FUNDAMENTAL OF INFORMATION SYSTEMS AUDIT - 2024
+MCA,Master of Computer Applications,Post Graduate Degree in Computer Applications,SEM3,Semester 3,P13A5DS2,DATA SCIENCE-II - 2024
+MCA,Master of Computer Applications,Post Graduate Degree in Computer Applications,SEM3,Semester 3,P13A5BD2,BIG DATA ANALYTICS-II - 2024
+MCA,Master of Computer Applications,Post Graduate Degree in Computer Applications,SEM3,Semester 3,P13A5CC2,CLOUD COMPUTING-II - 2024
+MCA,Master of Computer Applications,Post Graduate Degree in Computer Applications,SEM3,Semester 3,P13A5ML2,MACHINE LEARNING-II - 2024
+MCA,Master of Computer Applications,Post Graduate Degree in Computer Applications,SEM3,Semester 3,P13A5BC2,BLOCKCHAIN TECHNOLOGY-II - 2024
+MCA,Master of Computer Applications,Post Graduate Degree in Computer Applications,SEM3,Semester 3,P13A6SDP1,SYSTEM DEVELOPMENT PROJECT – I
+MCA,Master of Computer Applications,Post Graduate Degree in Computer Applications,SEM4,Semester 4,P14A1SDP2,SYSTEM DEVELOPMENT PROJECT – II - 2024
